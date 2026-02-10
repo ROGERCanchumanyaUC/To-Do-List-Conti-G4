@@ -12,6 +12,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     text,
+    Boolean,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
