@@ -1,7 +1,10 @@
 # src/modelo/bd_model.py
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -12,7 +15,6 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     text,
-    Boolean,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -39,13 +41,7 @@ class Usuario(Base):
         String(255),
         nullable=False,
     )
-    activo: Mapped[int] = mapped_column(
-        Boolean,
-        default=True,
-        server_default=text("1"),
-        nullable=True,
-    )
-    creado_en: Mapped[object] = mapped_column(
+    creado_en: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP"),
@@ -55,10 +51,6 @@ class Usuario(Base):
         back_populates="usuario",
         cascade="all, delete-orphan",
         passive_deletes=True,
-    )
-
-    __table_args__ = (
-        CheckConstraint("activo IN (0, 1)", name="ck_usuarios_activo_bool"),
     )
 
     def __repr__(self) -> str:
@@ -96,20 +88,20 @@ class Tarea(Base):
         nullable=True,
     )
 
-    # En SQLite se maneja como 0/1 (Integer).
-    completada: Mapped[int] = mapped_column(
+    # Boolean en SQLite se almacena como 0/1
+    completada: Mapped[bool] = mapped_column(
         Boolean,
+        nullable=False,
         default=False,
         server_default=text("0"),
-        nullable=0,
     )
 
-    creada_en: Mapped[object] = mapped_column(
+    creada_en: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP"),
     )
-    actualizada_en: Mapped[object] = mapped_column(
+    actualizada_en: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
         server_default=text("CURRENT_TIMESTAMP"),
@@ -119,22 +111,19 @@ class Tarea(Base):
     usuario: Mapped["Usuario"] = relationship(back_populates="tareas")
 
     __table_args__ = (
-        # Validaciones desde BD
         CheckConstraint(
             "length(trim(titulo)) > 0",
             name="ck_tareas_titulo_no_vacio",
         ),
         CheckConstraint(
             "completada IN (0, 1)",
-            name="ck_tareas_completada_bool",
+            name="ck_tareas_completada_01",
         ),
-        # Recomendado: evita duplicados de título por usuario (apoya HU02)
         UniqueConstraint(
             "id_usuario",
             "titulo",
             name="uq_tareas_usuario_titulo",
         ),
-        # Índices para listar rápido (HU03)
         Index("ix_tareas_usuario_completada", "id_usuario", "completada"),
         Index("ix_tareas_usuario_creada", "id_usuario", "creada_en"),
     )

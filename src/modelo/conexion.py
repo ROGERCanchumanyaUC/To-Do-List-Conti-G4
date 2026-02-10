@@ -1,72 +1,43 @@
-# src/modelo/conexion.py
 from __future__ import annotations
 
 from pathlib import Path
 
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
-
-# ---------------------------------------------------------------------
-# Configuración de base de datos (SQLite)
-# Requisito: la BD debe persistir en el archivo "DB.sqlite" en la raíz.
-# ---------------------------------------------------------------------
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DB_FILENAME = "DB.sqlite"
-DB_PATH = PROJECT_ROOT / DB_FILENAME
+DB_PATH = PROJECT_ROOT / "DB.sqlite"
 DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 
 class Base(DeclarativeBase):
-    """Base declarativa para los modelos ORM."""
-    pass
+    """Base declarativa para modelos ORM."""
 
 
-def get_engine(*, echo: bool = False):
+ENGINE = create_engine(DATABASE_URL, echo=False, future=True)
+
+
+def crear_db_sqlite() -> Path:
     """
-    Crea el engine de SQLAlchemy para SQLite.
-
-    - Activa PRAGMA foreign_keys=ON (obligatorio para que funcionen FKs en SQLite).
-    - Configura WAL y synchronous=NORMAL como ajustes recomendados.
+    Crea el archivo DB.sqlite si no existe.
+    SQLite crea el archivo al abrir una conexión.
     """
-    engine = create_engine(DATABASE_URL, echo=echo, future=True)
-
-    @event.listens_for(engine, "connect")
-    def _set_sqlite_pragmas(dbapi_connection, _connection_record):
-        cursor = dbapi_connection.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.execute("PRAGMA journal_mode=WAL")
-        cursor.execute("PRAGMA synchronous=NORMAL")
-        cursor.close()
-
-    return engine
+    with ENGINE.connect():
+        pass
+    return DB_PATH
 
 
-ENGINE = get_engine(echo=False)
-
-SessionLocal = sessionmaker(
-    bind=ENGINE,
-    autoflush=False,
-    autocommit=False,
-    future=True,
-)
-
-
-def init_db(*, echo: bool = False) -> None:
+def init_db() -> None:
     """
-    Crea/verifica las tablas en DB.sqlite.
-
-    Importa los modelos dentro de la función para registrar las tablas
-    en Base.metadata sin provocar imports circulares.
+    Crea/verifica tablas en DB.sqlite según los modelos ORM.
     """
-    engine = get_engine(echo=echo)
-
-    # Import requerido para que SQLAlchemy registre los modelos.
+    # Importa aquí para evitar imports circulares
     from src.modelo.bd_model import Tarea, Usuario  # noqa: F401
 
-    Base.metadata.create_all(engine)
+    Base.metadata.create_all(bind=ENGINE)
 
 
 if __name__ == "__main__":
-    init_db(echo=True)
-    print(f"✅ Base de datos creada/verificada en: {DB_PATH}")
+    crear_db_sqlite()
+    init_db()
+    print(f"✅ DB.sqlite y tablas creadas/verificadas en: {DB_PATH}")
