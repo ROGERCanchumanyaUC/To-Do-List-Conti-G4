@@ -88,7 +88,6 @@ class Tarea(Base):
         nullable=True,
     )
 
-    # Boolean en SQLite se almacena como 0/1
     completada: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
