@@ -39,9 +39,10 @@ class Usuario(Base):
         nullable=False,
     )
     activo: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
+        Boolean,
+        default=True,
         server_default=text("1"),
+        nullable=True,
     )
     creado_en: Mapped[object] = mapped_column(
         DateTime,
@@ -96,9 +97,10 @@ class Tarea(Base):
 
     # En SQLite se maneja como 0/1 (Integer).
     completada: Mapped[int] = mapped_column(
-        Integer,
-        nullable=False,
+        Boolean,
+        default=False,
         server_default=text("0"),
+        nullable=0,
     )
 
     creada_en: Mapped[object] = mapped_column(
