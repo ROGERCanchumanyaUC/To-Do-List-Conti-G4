@@ -60,7 +60,7 @@ OOPRA/
 ├─ Makefile
 ├─ source/
 └─ build/
-````
+```
 ---
 
 ## Historias de Usuario (rama por funcionalidad)
@@ -292,17 +292,17 @@ Actualmente Sphinx está configurado para:
 
 ## Avances completados (últimos avances)
 
-✅ Git y GitHub en uso
-✅ `.gitignore` incluido
-✅ `README.md` completo (este archivo)
-✅ SQLite configurado y persistencia en `DB.sqlite`
-✅ Modelos ORM (`Usuario`, `Tarea`) y relaciones
-✅ Repositorio SQLite (transacciones + errores de integridad)
-✅ Lógica de negocio en `TaskManager`
-✅ Pruebas con `unittest` en `src/tests`
-✅ Cobertura con `coverage` (reporte en consola y opcional HTML)
-✅ Estándares PEP-8 con Ruff + Black + isort
-✅ Documentación técnica con Sphinx (HTML generado)
+- ✅ Git y GitHub en uso
+- ✅ `.gitignore` incluido
+- ✅ `README.md` completo (este archivo)
+- ✅ SQLite configurado y persistencia en `DB.sqlite`
+- ✅ Modelos ORM (`Usuario`, `Tarea`) y relaciones
+- ✅ Repositorio SQLite (transacciones + errores de integridad)
+- ✅ Lógica de negocio en `TaskManager`
+- ✅ Pruebas con `unittest` en `src/tests`
+- ✅ Cobertura con `coverage` (reporte en consola y opcional HTML)
+- ✅ Estándares PEP-8 con Ruff + Black + isort
+- ✅ Documentación técnica con Sphinx (HTML generado)
 
 ---
 
@@ -326,11 +326,3 @@ Luego vuelve a compilar:
 .\make.bat html
 ```
 
----
-
-## Licencia
-
-Uso académico (Universidad). Si deseas agregar licencia, puedes incluir MIT o Apache-2.0.
-
-```
-```
