@@ -34,5 +34,73 @@ El objetivo de **OOPRA** es brindar una solución simple y organizada para:
 - **Contenedorización:** Docker  
 
 ---
+## 5) Estructura del proyecto
+```text
+To-Do-List-Conti-G4/
+│
+├── main.py
+├── DB.sqlite
+├── BD.sql
+├── src/
+│   ├── logica/
+│   │   └── task_manager.py
+│   ├── modelo/
+│   │   ├── bd_model.py
+│   │   ├── conexion.py
+│   │   └── repositorio_tareas.py
+│   └── tests/
+│       ├── test_task_manager.py
+│       └── cobertura_extra.py
+│
+├── .gitignore
+└── README.md
+```
+---
+## 6) Instalación y configuración
+  - Clonar el repositorio
+    - git clone https://github.com/ROGERCanchumanyaUC/To-Do-List-Conti-G4.git
+cd To-Do-List-Conti-G4
+  - Crear y activar el entorno virtual
+    - python -m venv .venv
+    - .venv\Scripts\activate
+  - Instalar dependencias
+    - pip install -r requirements.txt
+---
+## 7) Inicialización de la base de datos
+  - Ejecutar el siguiente comando:
+    - python main.py
+  - Este comando:
+    - Crea o verifica la base de datos DB.sqlite
 
+    - Crea las tablas mediante SQLAlchemy
+
+    - Ejecuta el script BD.sql
+
+    - Muestra un resumen de las tablas creadas
+---
+## 8) Uso de la aplicación
+  - La aplicación permite:
+    - Crear tareas
+
+    - Listar tareas por usuario
+
+    - Editar tareas
+
+    - Eliminar tareas
+
+    - Marcar tareas como completada
+---
+## 9) Ejecución de pruebas
+  - Para ejecutar las pruebas unitarias:
+    - python -m unittest discover -s src/tests -v
+---
+## 10) Control de versiones (Git)
+  - El proyecto sigue buenas prácticas de Git:
+    - Commits atómicos y descriptivos
+
+    - Historial de cambios coherente
+
+    - Uso de ramas para organizar el desarrollo
+
+    - Archivo .gitignore adecuado para proyectos Python
 
