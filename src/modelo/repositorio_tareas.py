@@ -19,6 +19,7 @@ except ImportError:  # pragma: no cover
 @dataclass(frozen=True)
 class ResultadoOperacion:
     """Resultado estándar para operaciones CRUD."""
+
     ok: bool
     mensaje: str = ""
 
@@ -69,7 +70,7 @@ class RepositorioTareasSQLite:
                     completada=False,
                 )
                 session.add(tarea)
-                session.flush()         # genera id_tarea
+                session.flush()  # genera id_tarea
                 session.refresh(tarea)  # asegura valores actualizados
 
                 # ✅ CLAVE: evita DetachedInstanceError tras commit/cierre de sesión

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import sqlite3
+from pathlib import Path
 
 from src.modelo.conexion import DB_PATH, crear_db_sqlite, init_db
 

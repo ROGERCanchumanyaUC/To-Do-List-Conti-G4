@@ -25,7 +25,9 @@ class TestTaskManagerConDBReal(unittest.TestCase):
 
         # Crear (o recuperar) usuario de pruebas
         with SessionLocal.begin() as session:
-            session.query(Usuario).filter(Usuario.username == cls.username_test).delete()
+            session.query(Usuario).filter(
+                Usuario.username == cls.username_test
+            ).delete()
 
             stmt = select(Usuario).where(Usuario.username == cls.username_test)
             usuario = session.execute(stmt).scalar_one_or_none()
@@ -47,7 +49,9 @@ class TestTaskManagerConDBReal(unittest.TestCase):
 
     # HU02
     def test_crear_tarea_ok(self) -> None:
-        tarea = self.manager.crear_tarea(self.id_usuario, "Comprar pan", "Ir a la tienda")
+        tarea = self.manager.crear_tarea(
+            self.id_usuario, "Comprar pan", "Ir a la tienda"
+        )
         self.assertIsNotNone(tarea)
 
         tareas = self.manager.listar_tareas(self.id_usuario)
@@ -97,12 +101,10 @@ class TestTaskManagerConDBReal(unittest.TestCase):
 
         tareas = self.manager.listar_tareas(self.id_usuario)
         self.assertTrue(bool(tareas[0].completada))
-        
+
     # Repositorio sin inyectar
     def test_repo_sin_inyeccion_usa_sessionlocal(self) -> None:
-        from src.modelo.repositorio_tareas import RepositorioTareasSQLite
-        from src.modelo.conexion import SessionLocal, init_db
-
+        
         init_db()
         repo = RepositorioTareasSQLite()
         self.assertIs(repo._session_factory, SessionLocal)  # noqa: SLF001

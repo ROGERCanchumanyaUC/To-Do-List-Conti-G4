@@ -4,7 +4,7 @@ from __future__ import annotations
 import runpy
 import unittest
 
-from sqlalchemy import select
+
 
 from src.modelo import conexion as conexion_module
 from src.modelo.bd_model import Tarea, Usuario
