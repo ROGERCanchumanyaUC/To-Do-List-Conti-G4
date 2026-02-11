@@ -1,6 +1,7 @@
 # src/modelo/conexion.py
 from __future__ import annotations
 
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
@@ -17,14 +18,13 @@ class Base(DeclarativeBase):
     """Base declarativa para modelos ORM."""
 
 
-
 def _create_engine(*, echo: bool = False) -> Engine:
-    """
-    Crea el engine SQLite.
+    """Crea el engine SQLite con pragmas recomendados.
 
     Nota:
-    - SQLite NO aplica Foreign Keys por defecto: se activa con PRAGMA foreign_keys=ON.
-    - Para que solo exista DB.sqlite (sin -wal ni -shm), usamos journal_mode=DELETE.
+        - SQLite no aplica Foreign Keys por defecto: se activa con PRAGMA foreign_keys=ON.
+        - Para que solo exista DB.sqlite (sin -wal ni -shm), usamos journal_mode=DELETE.
+        - synchronous=FULL es consistente con DELETE (más seguro, un poco más lento).
     """
     engine = create_engine(
         DATABASE_URL,
@@ -36,13 +36,8 @@ def _create_engine(*, echo: bool = False) -> Engine:
     def _set_sqlite_pragmas(dbapi_connection, _connection_record) -> None:
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
-
-        # ✅ Evita archivos DB.sqlite-wal y DB.sqlite-shm
         cursor.execute("PRAGMA journal_mode=DELETE")
-
-        # ✅ Consistente con DELETE (más seguro)
         cursor.execute("PRAGMA synchronous=FULL")
-
         cursor.close()
 
     return engine
@@ -60,25 +55,21 @@ SessionLocal = sessionmaker(
 
 
 def crear_db_sqlite() -> Path:
-    """
-    Asegura que DB.sqlite exista.
-    SQLite crea el archivo al abrir una conexión.
+    """Asegura que DB.sqlite exista.
+
+    SQLite crea el archivo físico al abrir una conexión.
     """
     with ENGINE.connect():
         pass
     return DB_PATH
 
 
+@contextmanager
 def get_session() -> Iterator[Session]:
-    """
-    Provee una sesión para uso en repositorios/servicios.
+    """Entrega una sesión SQLAlchemy lista para usar.
 
-    Uso:
-        session = next(get_session())
-        try:
-            ...
-        finally:
-            session.close()
+    Yields:
+        Session: Sesión conectada a la base de datos.
     """
     session = SessionLocal()
     try:
@@ -88,10 +79,8 @@ def get_session() -> Iterator[Session]:
 
 
 def init_db() -> None:
-    """
-    Crea/verifica tablas en DB.sqlite según los modelos ORM.
-    """
-
+    """Crea/verifica tablas en DB.sqlite según los modelos ORM."""
+    # Import interno para registrar metadata sin ciclos de importación
     from src.modelo.bd_model import Tarea, Usuario  # noqa: F401
 
     Base.metadata.create_all(bind=ENGINE)
