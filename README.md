@@ -1,7 +1,11 @@
-```markdown
 # OOPRA – Gestor de Tareas (Python + SQLite + Docker)
 
-Herramienta de línea de comandos (CLI) para **gestionar y organizar tareas diarias**. Permite **crear, listar, editar, eliminar** y **marcar tareas como completadas**, asegurando **persistencia** en una base de datos **SQLite** (`DB.sqlite`). El proyecto se desarrolla con **TDD**, control de versiones con **Git/GitHub**, y entorno reproducible con **Docker**.
+Herramienta de línea de comandos (CLI) para 
+**gestionar y organizar tareas diarias**. Permite 
+**crear, listar, editar, eliminar** y 
+**marcar tareas como completadas**, asegurando 
+**persistencia** en una base de datos **SQLite** (`DB.sqlite`). 
+El proyecto se desarrolla con **TDD**, control de versiones con **Git/GitHub**, y entorno reproducible con **Docker**.
 
 ---
 
