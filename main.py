@@ -3,26 +3,17 @@ from __future__ import annotations
 from pathlib import Path
 import sqlite3
 
-from src.modelo.conexion import crear_db_sqlite, init_db
+from src.modelo.conexion import DB_PATH, crear_db_sqlite, init_db
 
 
 def cargar_bd_sql(db_path: Path, sql_path: Path) -> None:
     """
     Ejecuta BD.sql en DB.sqlite usando sqlite3.
-
-    Args:
-        db_path: Ruta de DB.sqlite.
-        sql_path: Ruta de BD.sql.
+    Si el archivo no existe, NO revienta (solo avisa).
     """
-    if not db_path.exists():
-        raise FileNotFoundError(
-            f"No existe {db_path.name} en la raíz del proyecto: {db_path.resolve()}"
-        )
-
     if not sql_path.exists():
-        raise FileNotFoundError(
-            f"No existe {sql_path.name} en la raíz del proyecto: {sql_path.resolve()}"
-        )
+        print(f"ℹ️ No existe {sql_path.name}. Se omite carga de datos.")
+        return
 
     script_sql = sql_path.read_text(encoding="utf-8")
 
@@ -35,6 +26,7 @@ def mostrar_resumen(db_path: Path) -> None:
     """Imprime un resumen simple de tablas y cantidad de filas."""
     with sqlite3.connect(db_path) as con:
         cur = con.cursor()
+
         cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
         tablas = [row[0] for row in cur.fetchall()]
 
@@ -53,26 +45,23 @@ def mostrar_resumen(db_path: Path) -> None:
 
 
 def main() -> None:
-    """
-    Flujo:
-    1) Crear/verificar DB.sqlite
-    2) Crear/verificar tablas ORM (usuarios, tareas)
-    3) Cargar datos de BD.sql
-    4) Mostrar resumen
-    """
-    db_path = Path("DB.sqlite")
+    print("🚀 Iniciando OOPRA (main.py) ...")
+
+    # ✅ usa la misma ruta canónica del proyecto (conexion.py)
+    db_path = DB_PATH
     sql_path = Path("BD.sql")
 
     crear_db_sqlite()
-    print("✅ Archivo DB.sqlite creado/verificado.")
+    print(f"✅ DB creada/verificada en: {db_path.resolve()}")
 
     init_db()
-    print("✅ Tablas creadas/verificadas (SQLAlchemy).")
+    print("✅ Tablas ORM creadas/verificadas (usuarios, tareas)")
 
     cargar_bd_sql(db_path=db_path, sql_path=sql_path)
-    print("✅ BD.sql ejecutado correctamente.")
 
     mostrar_resumen(db_path=db_path)
+
+    print("\n✅ Proceso finalizado.")
 
 
 if __name__ == "__main__":
