@@ -104,8 +104,7 @@ class TestTaskManagerConDBReal(unittest.TestCase):
 
     # Repositorio sin inyectar
     def test_repo_sin_inyeccion_usa_sessionlocal(self) -> None:
-        
+
         init_db()
         repo = RepositorioTareasSQLite()
         self.assertIs(repo._session_factory, SessionLocal)  # noqa: SLF001
-
