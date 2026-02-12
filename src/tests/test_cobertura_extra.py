@@ -55,10 +55,8 @@ class TestCoberturaExtra(unittest.TestCase):
         self.assertTrue(path.exists())
 
     def test_get_session_cierra_sesion(self) -> None:
-        gen = get_session()
-        session = next(gen)
-        self.assertIsNotNone(session)
-        gen.close()  # ejecuta finally -> session.close()
+        with get_session() as session:
+            self.assertIsNotNone(session)
 
     def test_create_engine_privado(self) -> None:
         # Cubre _create_engine y el listener de PRAGMAs

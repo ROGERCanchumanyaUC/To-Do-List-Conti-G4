@@ -107,5 +107,4 @@ class TestTaskManagerConDBReal(unittest.TestCase):
         
         init_db()
         repo = RepositorioTareasSQLite()
-        self.assertIs(repo._session_factory, SessionLocal)  # noqa: SLF001
-
+        self.assertIs(repo._session_factory, SessionLocal)  # noqa: SLF001s
