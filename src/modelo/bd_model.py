@@ -3,19 +3,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import (
-    Boolean,
-    CheckConstraint,
-    DateTime,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    Text,
-    UniqueConstraint,
-    func,
-    text,
-)
+from sqlalchemy import (Boolean, CheckConstraint, DateTime, ForeignKey, Index,
+                        Integer, String, Text, UniqueConstraint, func, text)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.modelo.conexion import Base
