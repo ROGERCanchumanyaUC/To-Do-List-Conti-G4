@@ -1,0 +1,166 @@
+/* =========================
+   Estilos base (QSS)
+   ========================= */
+
+QWidget {
+    font-family: "Segoe UI";
+    font-size: 12px;
+}
+
+QMainWindow {
+    background: #0b1220;
+}
+
+/* ---------- Login ---------- */
+QWidget#LoginRoot {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 1,
+        stop: 0 #2563eb,
+        stop: 0.55 #7c3aed,
+        stop: 1 #ec4899
+    );
+}
+
+QFrame#LoginCard {
+    background: #ffffff;
+    border-radius: 18px;
+}
+
+QFrame#LoginHeader {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 #2563eb,
+        stop: 1 #7c3aed
+    );
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+}
+
+QLabel#LoginTitle {
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+QLabel#LoginSubtitle {
+    color: #e0e7ff;
+}
+
+QLineEdit {
+    padding: 10px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+QLineEdit:focus {
+    border: 2px solid #7c3aed;
+}
+
+QPushButton#BtnPrimario {
+    padding: 10px 14px;
+    border-radius: 10px;
+    color: white;
+    font-weight: 700;
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 #2563eb,
+        stop: 1 #7c3aed
+    );
+}
+
+QPushButton#BtnPrimario:hover {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 0,
+        stop: 0 #1d4ed8,
+        stop: 1 #6d28d9
+    );
+}
+
+QPushButton#BtnSecundario {
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: #f3f4f6;
+    color: #111827;
+    font-weight: 600;
+}
+
+QPushButton#BtnSecundario:hover {
+    background: #e5e7eb;
+}
+
+/* ---------- Dashboard ---------- */
+QWidget#DashboardRoot {
+    background: #0b1220;
+    color: #e5e7eb;
+}
+
+QFrame#TopBar {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+}
+
+QLabel#AppTitle {
+    font-size: 18px;
+    font-weight: 800;
+}
+
+QLineEdit#BuscarInput {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+QFrame#PanelLista, QFrame#PanelFormulario {
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+}
+
+QPushButton#Chip {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #e5e7eb;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+QPushButton#Chip:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+QPushButton#ChipActivo {
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.35);
+    color: #ffffff;
+    font-weight: 700;
+    border: 1px solid rgba(37, 99, 235, 0.55);
+}
+
+/* ---------- Tarjeta tarea ---------- */
+QFrame#TarjetaTarea {
+    background: rgba(255, 255, 255, 0.07);
+    border-radius: 14px;
+}
+
+QLabel#TituloTarea {
+    font-size: 14px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+QLabel#MetaTarea {
+    color: rgba(229, 231, 235, 0.78);
+}
+
+QPushButton#BtnAccion {
+    padding: 7px 10px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    color: #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+QPushButton#BtnAccion:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
