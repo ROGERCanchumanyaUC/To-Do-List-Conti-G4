@@ -1,371 +1,355 @@
+# src/vista/pantalla_dashboard.py
 from __future__ import annotations
 
-from enum import Enum
+from datetime import datetime
 
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QScrollArea,
-    QSplitter,
-    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
 
-from src.vista.controlador_tareas_vista import ControladorTareas, TareaVista, UsuarioSesion
-from src.vista.dialogos import confirmar, mostrar_error, mostrar_info
-from src.vista.widgets.formulario_tarea import DatosFormularioTarea, FormularioTarea
-from src.vista.widgets.tarjeta_tarea import TarjetaTarea
-
-
-class FiltroTareas(str, Enum):
-    TODAS = "todas"
-    PENDIENTES = "pendientes"
-    COMPLETADAS = "completadas"
+from src.vista.controlador_tareas_vista import ControladorTareasVista, SesionVista, TareaVista
 
 
 class PantallaDashboard(QWidget):
-    """Dashboard con listado + formulario lateral y modo pantalla completa."""
+    logout_solicitado = pyqtSignal()
+    registrar_tarea_solicitada = pyqtSignal()
+    editar_tarea_solicitada = pyqtSignal(str)
 
-    def __init__(
-        self,
-        sesion: UsuarioSesion,
-        controlador: ControladorTareas,
-        parent: QWidget | None = None,
-    ) -> None:
-        super().__init__(parent)
+    def __init__(self, *, sesion: SesionVista, controlador: ControladorTareasVista) -> None:
+        super().__init__()
         self.setObjectName("DashboardRoot")
 
         self._sesion = sesion
         self._controlador = controlador
 
-        self._filtro = FiltroTareas.TODAS
-        self._texto_busqueda = ""
+        self._lbl_contador = QLabel("")
+        self._input_buscar = QLineEdit()
+        self._chips: dict[str, QPushButton] = {}
 
-        self._btn_chip_todas = QPushButton("Todas")
-        self._btn_chip_pend = QPushButton("Pendientes")
-        self._btn_chip_comp = QPushButton("Completadas")
+        self._lbl_total = QLabel("0")
+        self._lbl_pendientes = QLabel("0")
+        self._lbl_completadas = QLabel("0")
 
-        for btn in (self._btn_chip_todas, self._btn_chip_pend, self._btn_chip_comp):
-            btn.setObjectName("Chip")
-            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._btn_logout = QPushButton("Cerrar Sesión")
+        self._btn_registrar = QPushButton("Registrar Tarea")
 
-        self._btn_chip_todas.clicked.connect(lambda: self._set_filtro(FiltroTareas.TODAS))
-        self._btn_chip_pend.clicked.connect(
-            lambda: self._set_filtro(FiltroTareas.PENDIENTES)
-        )
-        self._btn_chip_comp.clicked.connect(
-            lambda: self._set_filtro(FiltroTareas.COMPLETADAS)
-        )
+        self._scroll = QScrollArea()
+        self._contenedor_listas = QWidget()
+        self._layout_listas = QVBoxLayout(self._contenedor_listas)
 
-        self._buscar = QLineEdit()
-        self._buscar.setObjectName("BuscarInput")
-        self._buscar.setPlaceholderText("Buscar por título…")
-        self._buscar.textChanged.connect(self._on_buscar)
+        self._construir_ui()
+        self._conectar_eventos()
+        self._refrescar_ui()
 
-        self._btn_nueva = QPushButton("Nueva tarea")
-        self._btn_nueva.setObjectName("BtnPrimario")
-        self._btn_nueva.clicked.connect(self._nueva_tarea)
+        if self._controlador.mostrar_tutorial:
+            self._mostrar_tutorial()
 
-        self._btn_full = QPushButton("Formulario pantalla completa")
-        self._btn_full.setObjectName("BtnSecundario")
-        self._btn_full.clicked.connect(self._abrir_formulario_fullscreen)
-
-        top_bar = self._crear_topbar()
-
-        # Listado (scroll + tarjetas)
-        self._panel_lista = QFrame()
-        self._panel_lista.setObjectName("PanelLista")
-        lista_layout = QVBoxLayout(self._panel_lista)
-        lista_layout.setContentsMargins(16, 16, 16, 16)
-        lista_layout.setSpacing(12)
-
-        self._lbl_subtitulo = QLabel("Tus tareas")
-        self._lbl_subtitulo.setObjectName("MetaTarea")
-
-        self._contenedor_tarjetas = QWidget()
-        self._contenedor_layout = QVBoxLayout(self._contenedor_tarjetas)
-        self._contenedor_layout.setContentsMargins(0, 0, 0, 0)
-        self._contenedor_layout.setSpacing(10)
-        self._contenedor_layout.addStretch(1)
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setWidget(self._contenedor_tarjetas)
-
-        lista_layout.addWidget(self._lbl_subtitulo)
-        lista_layout.addWidget(scroll)
-
-        # Formulario lateral
-        self._formulario = FormularioTarea()
-        self._formulario.guardar.connect(self._guardar_formulario)
-        self._formulario.cancelar.connect(self._cancelar_formulario)
-
-        # Splitter (lista + formulario lateral)
-        splitter = QSplitter()
-        splitter.setOrientation(Qt.Orientation.Horizontal)
-        splitter.addWidget(self._panel_lista)
-        splitter.addWidget(self._formulario)
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 2)
-
-        # Vista normal (splitter)
-        vista_split = QWidget()
-        vs_layout = QVBoxLayout(vista_split)
-        vs_layout.setContentsMargins(0, 0, 0, 0)
-        vs_layout.addWidget(splitter)
-
-        # Vista fullscreen del formulario
-        self._formulario_full = FormularioTarea()
-        self._formulario_full.guardar.connect(self._guardar_formulario_full)
-        self._formulario_full.cancelar.connect(self._volver_desde_fullscreen)
-
-        self._btn_volver = QPushButton("← Volver al listado")
-        self._btn_volver.setObjectName("BtnSecundario")
-        self._btn_volver.clicked.connect(self._volver_desde_fullscreen)
-
-        vista_full = QWidget()
-        vf_layout = QVBoxLayout(vista_full)
-        vf_layout.setContentsMargins(0, 0, 0, 0)
-        vf_layout.setSpacing(10)
-
-        vf_layout.addWidget(self._btn_volver, alignment=Qt.AlignmentFlag.AlignLeft)
-        vf_layout.addWidget(self._formulario_full)
-
-        self._stack_cuerpo = QStackedWidget()
-        self._stack_cuerpo.addWidget(vista_split)  # index 0
-        self._stack_cuerpo.addWidget(vista_full)  # index 1
-
+    def _construir_ui(self) -> None:
         root = QVBoxLayout(self)
-        root.setContentsMargins(18, 18, 18, 18)
-        root.setSpacing(14)
-        root.addWidget(top_bar)
-        root.addWidget(self._stack_cuerpo)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
 
-        self._refrescar_chips()
-        self._refrescar_listado()
+        # Header
+        header = QFrame()
+        header.setObjectName("Header")
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(24, 18, 24, 18)
 
-    def _crear_topbar(self) -> QFrame:
-        top = QFrame()
-        top.setObjectName("TopBar")
+        box_tit = QVBoxLayout()
+        lbl_tit = QLabel("Mis Tareas")
+        lbl_tit.setObjectName("HeaderTitulo")
+        lbl_user = QLabel(self._sesion.username)
+        lbl_user.setObjectName("HeaderUsuario")
+        box_tit.addWidget(lbl_tit)
+        box_tit.addWidget(lbl_user)
 
-        titulo = QLabel("Dashboard de Tareas")
-        titulo.setObjectName("AppTitle")
+        self._btn_logout.setObjectName("BotonLogout")
 
-        usuario = QLabel(f"Usuario: {self._sesion.username}")
-        usuario.setObjectName("MetaTarea")
+        header_layout.addLayout(box_tit)
+        header_layout.addStretch(1)
+        header_layout.addWidget(self._btn_logout)
 
-        chips = QHBoxLayout()
-        chips.setSpacing(8)
-        chips.addWidget(self._btn_chip_todas)
-        chips.addWidget(self._btn_chip_pend)
-        chips.addWidget(self._btn_chip_comp)
-        chips.addStretch(1)
+        root.addWidget(header)
 
-        fila_sup = QHBoxLayout()
-        fila_sup.addWidget(titulo)
-        fila_sup.addStretch(1)
-        fila_sup.addWidget(usuario)
+        # Contenido
+        cont = QWidget()
+        cont_layout = QVBoxLayout(cont)
+        cont_layout.setContentsMargins(24, 24, 24, 24)
+        cont_layout.setSpacing(16)
 
-        fila_inf = QHBoxLayout()
-        fila_inf.setSpacing(10)
-        fila_inf.addLayout(chips)
-        fila_inf.addWidget(self._buscar, stretch=2)
-        fila_inf.addWidget(self._btn_full)
-        fila_inf.addWidget(self._btn_nueva)
+        # Panel búsqueda/filtros + acción registrar
+        panel = QFrame()
+        panel.setObjectName("PanelBlanco")
+        p_layout = QVBoxLayout(panel)
+        p_layout.setContentsMargins(18, 18, 18, 18)
+        p_layout.setSpacing(12)
 
-        layout = QVBoxLayout(top)
-        layout.setContentsMargins(16, 14, 16, 14)
-        layout.setSpacing(10)
-        layout.addLayout(fila_sup)
-        layout.addLayout(fila_inf)
+        row_top = QHBoxLayout()
+        lbl_buscar = QLabel("Buscar tareas")
+        lbl_buscar.setObjectName("Subtitulo")
 
-        return top
+        self._btn_registrar.setObjectName("BotonPrimario")
+        self._btn_registrar.setText("Registrar Tarea")
 
-    def _set_filtro(self, filtro: FiltroTareas) -> None:
-        self._filtro = filtro
-        self._refrescar_chips()
-        self._refrescar_listado()
+        row_top.addWidget(lbl_buscar)
+        row_top.addStretch(1)
+        row_top.addWidget(self._btn_registrar)
 
-    def _refrescar_chips(self) -> None:
-        self._btn_chip_todas.setObjectName("Chip")
-        self._btn_chip_pend.setObjectName("Chip")
-        self._btn_chip_comp.setObjectName("Chip")
+        self._input_buscar.setPlaceholderText("Buscar por nombre de la tarea...")
 
-        if self._filtro == FiltroTareas.TODAS:
-            self._btn_chip_todas.setObjectName("ChipActivo")
-        elif self._filtro == FiltroTareas.PENDIENTES:
-            self._btn_chip_pend.setObjectName("ChipActivo")
-        elif self._filtro == FiltroTareas.COMPLETADAS:
-            self._btn_chip_comp.setObjectName("ChipActivo")
+        p_layout.addLayout(row_top)
+        p_layout.addWidget(self._input_buscar)
 
-        # Fuerza re-aplicar estilo (cuando cambia objectName)
-        for btn in (self._btn_chip_todas, self._btn_chip_pend, self._btn_chip_comp):
+        lbl_filtro = QLabel("Filtrar por categoría")
+        lbl_filtro.setObjectName("Subtitulo")
+        p_layout.addWidget(lbl_filtro)
+
+        row_chips = QHBoxLayout()
+        row_chips.setSpacing(10)
+
+        for key, text in [
+            ("todas", "Todas las tareas"),
+            ("no importante", "No importante"),
+            ("obligatorio", "Obligatorio"),
+            ("pendiente", "Pendiente"),
+            ("completadas", "Completadas"),
+        ]:
+            btn = QPushButton(text)
+            btn.setObjectName("Chip")
+            btn.setProperty("activo", "false")
+            self._chips[key] = btn
+            row_chips.addWidget(btn)
+
+        row_chips.addStretch(1)
+        p_layout.addLayout(row_chips)
+
+        p_layout.addWidget(self._lbl_contador)
+
+        cont_layout.addWidget(panel)
+
+        # Estadísticas
+        stats = QGridLayout()
+        stats.setHorizontalSpacing(12)
+        stats.setVerticalSpacing(12)
+
+        stats.addWidget(self._crear_card_estadistica("Total de Tareas", self._lbl_total), 0, 0)
+        stats.addWidget(self._crear_card_estadistica("Tareas Pendientes", self._lbl_pendientes), 0, 1)
+        stats.addWidget(self._crear_card_estadistica("Tareas Completadas", self._lbl_completadas), 0, 2)
+
+        cont_layout.addLayout(stats)
+
+        # Listas
+        self._scroll.setWidgetResizable(True)
+        self._layout_listas.setContentsMargins(0, 0, 0, 0)
+        self._layout_listas.setSpacing(12)
+        self._scroll.setWidget(self._contenedor_listas)
+
+        cont_layout.addWidget(self._scroll, 1)
+
+        root.addWidget(cont, 1)
+
+    def _crear_card_estadistica(self, titulo: str, lbl_valor: QLabel) -> QFrame:
+        card = QFrame()
+        card.setObjectName("Card")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(6)
+
+        lbl_t = QLabel(titulo)
+        lbl_t.setObjectName("TextoPequeno")
+
+        lbl_valor.setText("0")
+        lbl_valor.setStyleSheet("font-size: 28px; font-weight: 800; color: #111827;")
+
+        layout.addWidget(lbl_t)
+        layout.addWidget(lbl_valor)
+        return card
+
+    def _conectar_eventos(self) -> None:
+        self._btn_logout.clicked.connect(self.logout_solicitado.emit)
+        self._btn_registrar.clicked.connect(self.registrar_tarea_solicitada.emit)
+
+        self._input_buscar.textChanged.connect(self._controlador.set_search_query)
+
+        for key, btn in self._chips.items():
+            btn.clicked.connect(lambda _=False, k=key: self._controlador.set_category_filter(k))
+
+        self._controlador.datos_cambiaron.connect(self._refrescar_ui)
+
+    def _mostrar_tutorial(self) -> None:
+        msg = (
+            "Guía rápida:\n\n"
+            "1) Usa Buscar para filtrar por nombre.\n"
+            "2) Usa los filtros por categoría.\n"
+            "3) Presiona 'Registrar Tarea' para crear una nueva.\n"
+            "4) Edita desde cada tarjeta.\n"
+        )
+        QMessageBox.information(self, "Tutorial", msg)
+        self._controlador.cerrar_tutorial()
+
+    def _refrescar_ui(self) -> None:
+        filtro = getattr(self._controlador, "_category_filter", "todas")  # noqa: SLF001
+        for k, btn in self._chips.items():
+            btn.setProperty("activo", "true" if k == filtro else "false")
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
-    def _on_buscar(self, texto: str) -> None:
-        self._texto_busqueda = (texto or "").strip().lower()
-        self._refrescar_listado()
+        tareas_filtradas = self._controlador.tareas_filtradas()
+        tareas_total = self._controlador.tareas
 
-    def _obtener_tareas_filtradas(self) -> list[TareaVista]:
-        tareas = self._controlador.listar(self._sesion.id_usuario)
+        pendientes = [t for t in tareas_filtradas if not t.completed]
+        completadas = [t for t in tareas_filtradas if t.completed]
 
-        if self._filtro == FiltroTareas.PENDIENTES:
-            tareas = [t for t in tareas if not t.completada]
-        elif self._filtro == FiltroTareas.COMPLETADAS:
-            tareas = [t for t in tareas if t.completada]
+        self._lbl_total.setText(str(len(tareas_total)))
+        self._lbl_pendientes.setText(str(len([t for t in tareas_total if not t.completed])))
+        self._lbl_completadas.setText(str(len([t for t in tareas_total if t.completed])))
 
-        if self._texto_busqueda:
-            tareas = [t for t in tareas if self._texto_busqueda in t.titulo.lower()]
+        if self._controlador._search_query or filtro != "todas":  # noqa: SLF001
+            self._lbl_contador.setText(
+                f"Mostrando {len(tareas_filtradas)} de {len(tareas_total)} tareas"
+            )
+        else:
+            self._lbl_contador.setText("")
 
-        tareas.sort(key=lambda t: t.creada_en, reverse=True)
-        return tareas
+        while self._layout_listas.count():
+            item = self._layout_listas.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.deleteLater()
 
-    def _limpiar_tarjetas(self) -> None:
-        while self._contenedor_layout.count() > 0:
-            item = self._contenedor_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.deleteLater()
+        if filtro == "todas" or filtro != "completadas":
+            self._layout_listas.addWidget(self._crear_seccion("Tareas Pendientes", pendientes, es_completadas=False))
 
-        self._contenedor_layout.addStretch(1)
+        if (filtro == "todas" or filtro == "completadas") and completadas:
+            self._layout_listas.addWidget(self._crear_seccion("Tareas Completadas", completadas, es_completadas=True))
 
-    def _refrescar_listado(self) -> None:
-        self._limpiar_tarjetas()
-        tareas = self._obtener_tareas_filtradas()
+        self._layout_listas.addStretch(1)
+
+    def _crear_seccion(self, titulo: str, tareas: list[TareaVista], *, es_completadas: bool) -> QFrame:
+        box = QFrame()
+        box.setObjectName("PanelBlanco")
+        layout = QVBoxLayout(box)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(10)
+
+        lbl = QLabel(titulo)
+        lbl.setStyleSheet("font-size: 20px; font-weight: 800; color: #111827;")
+        layout.addWidget(lbl)
 
         if not tareas:
-            vacio = QLabel("No hay tareas para mostrar con los filtros actuales.")
-            vacio.setObjectName("MetaTarea")
-            self._contenedor_layout.insertWidget(0, vacio)
-            return
+            texto = (
+                "No se encontraron tareas que coincidan con los filtros"
+                if (self._controlador._search_query or self._controlador._category_filter != "todas")  # noqa: SLF001
+                else ("No tienes tareas completadas" if es_completadas else "No tienes tareas pendientes")
+            )
+            subt = (
+                "Intenta con otros criterios de búsqueda"
+                if (self._controlador._search_query or self._controlador._category_filter != "todas")  # noqa: SLF001
+                else "¡Agrega una nueva tarea para comenzar!"
+            )
+            empty = QLabel(f"{texto}\n{subt}")
+            empty.setObjectName("TextoPequeno")
+            empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            empty.setStyleSheet("padding: 18px;")
+            layout.addWidget(empty)
+            return box
 
-        for tarea in tareas:
-            card = TarjetaTarea(tarea)
-            card.editar.connect(self._editar_tarea)
-            card.eliminar.connect(self._eliminar_tarea)
-            card.alternar_completada.connect(self._alternar_completada)
-            self._contenedor_layout.insertWidget(self._contenedor_layout.count() - 1, card)
-
-    def _nueva_tarea(self) -> None:
-        self._formulario.modo_crear()
-        self._stack_cuerpo.setCurrentIndex(0)
-
-    def _editar_tarea(self, id_tarea: int) -> None:
-        tarea = self._buscar_tarea_por_id(id_tarea)
-        if tarea is None:
-            mostrar_error(self, "Error", "La tarea no existe.")
-            return
-        self._formulario.modo_editar(tarea)
-        self._stack_cuerpo.setCurrentIndex(0)
-
-    def _buscar_tarea_por_id(self, id_tarea: int) -> TareaVista | None:
-        tareas = self._controlador.listar(self._sesion.id_usuario)
         for t in tareas:
-            if t.id_tarea == id_tarea:
-                return t
-        return None
+            layout.addWidget(self._crear_card_tarea(t))
 
-    def _guardar_formulario(self, datos: DatosFormularioTarea) -> None:
-        self._guardar(datos, modo_full=False)
+        return box
 
-    def _guardar_formulario_full(self, datos: DatosFormularioTarea) -> None:
-        self._guardar(datos, modo_full=True)
+    def _crear_card_tarea(self, tarea: TareaVista) -> QFrame:
+        card = QFrame()
+        card.setObjectName("TaskCard")
 
-    def _guardar(self, datos: DatosFormularioTarea, *, modo_full: bool) -> None:
-        titulo = (datos.titulo or "").strip()
-        if not titulo:
-            mostrar_error(self, "Validación", "El título no puede estar vacío.")
-            return
+        l = QHBoxLayout(card)
+        l.setContentsMargins(14, 14, 14, 14)
+        l.setSpacing(12)
 
-        formulario = self._formulario_full if modo_full else self._formulario
-        id_tarea = formulario.id_tarea
-
-        if id_tarea is None:
-            nueva = self._controlador.crear(
-                self._sesion.id_usuario, titulo, datos.descripcion
-            )
-            if nueva is None:
-                mostrar_error(
-                    self,
-                    "Validación",
-                    "No se pudo crear. Puede ser título vacío o duplicado.",
-                )
-                return
-            if datos.completada:
-                self._controlador.marcar_completada(
-                    self._sesion.id_usuario, nueva.id_tarea, True
-                )
-            mostrar_info(self, "OK", "Tarea creada correctamente.")
-            formulario.modo_crear()
-        else:
-            ok = self._controlador.editar(
-                self._sesion.id_usuario,
-                id_tarea,
-                titulo,
-                datos.descripcion,
-            )
-            if not ok:
-                mostrar_error(
-                    self,
-                    "Validación",
-                    "No se pudo editar. Puede ser título vacío o duplicado.",
-                )
-                return
-            self._controlador.marcar_completada(
-                self._sesion.id_usuario, id_tarea, datos.completada
-            )
-            mostrar_info(self, "OK", "Tarea actualizada correctamente.")
-            formulario.modo_crear()
-
-        self._refrescar_listado()
-
-        if modo_full:
-            self._volver_desde_fullscreen()
-
-    def _cancelar_formulario(self) -> None:
-        self._formulario.modo_crear()
-
-    def _eliminar_tarea(self, id_tarea: int) -> None:
-        if not confirmar(self, "Confirmación", "¿Deseas eliminar esta tarea?"):
-            return
-
-        ok = self._controlador.eliminar(self._sesion.id_usuario, id_tarea)
-        if not ok:
-            mostrar_error(self, "Error", "No se pudo eliminar (no existe).")
-            return
-
-        self._refrescar_listado()
-
-    def _alternar_completada(self, id_tarea: int, completada: bool) -> None:
-        ok = self._controlador.marcar_completada(
-            self._sesion.id_usuario, id_tarea, completada
+        btn_check = QPushButton("✓" if tarea.completed else "")
+        btn_check.setFixedSize(28, 28)
+        btn_check.setStyleSheet(
+            "border-radius: 14px; border: 2px solid #9ca3af; font-weight: 900;"
+            + ("background:#dcfce7; border-color:#16a34a; color:#16a34a;" if tarea.completed else "")
         )
-        if not ok:
-            mostrar_error(self, "Error", "No se pudo actualizar el estado.")
-            return
-        self._refrescar_listado()
+        btn_check.clicked.connect(lambda _=False, tid=tarea.id: self._controlador.alternar_completada(tid))
 
-    def _abrir_formulario_fullscreen(self) -> None:
-        # Copia estado del formulario lateral al fullscreen
-        tarea_id = self._formulario.id_tarea
-        if tarea_id is None:
-            self._formulario_full.modo_crear()
-        else:
-            tarea = self._buscar_tarea_por_id(tarea_id)
-            if tarea is not None:
-                self._formulario_full.modo_editar(tarea)
-            else:
-                self._formulario_full.modo_crear()
+        centro = QVBoxLayout()
+        centro.setSpacing(6)
 
-        self._stack_cuerpo.setCurrentIndex(1)
+        row_top = QHBoxLayout()
+        titulo = QLabel(tarea.name)
+        titulo.setStyleSheet(
+            "font-size: 16px; font-weight: 800; color: #111827;"
+            + (" text-decoration: line-through; color:#6b7280;" if tarea.completed else "")
+        )
 
-    def _volver_desde_fullscreen(self) -> None:
-        self._formulario_full.modo_crear()
-        self._stack_cuerpo.setCurrentIndex(0)
+        fecha = QLabel(self._format_date(tarea.created_at))
+        fecha.setObjectName("TextoPequeno")
+        row_top.addWidget(titulo)
+        row_top.addStretch(1)
+        row_top.addWidget(fecha)
+
+        detalle = QLabel(tarea.detail)
+        detalle.setWordWrap(True)
+        detalle.setStyleSheet(
+            "color:#4b5563;"
+            + (" text-decoration: line-through; color:#6b7280;" if tarea.completed else "")
+        )
+
+        centro.addLayout(row_top)
+        centro.addWidget(detalle)
+
+        acciones = QVBoxLayout()
+        acciones.setSpacing(8)
+
+        btn_editar = QPushButton("Editar")
+        btn_editar.setObjectName("LinkNaranja")
+        btn_editar.clicked.connect(lambda _=False, tid=tarea.id: self.editar_tarea_solicitada.emit(tid))
+
+        btn_eliminar = QPushButton("Eliminar")
+        btn_eliminar.setObjectName("LinkRojo")
+        btn_eliminar.clicked.connect(lambda _=False, tid=tarea.id: self._confirmar_eliminar(tid))
+
+        acciones.addWidget(btn_editar)
+        acciones.addWidget(btn_eliminar)
+        acciones.addStretch(1)
+
+        l.addWidget(btn_check, 0, Qt.AlignmentFlag.AlignTop)
+        l.addLayout(centro, 1)
+        l.addLayout(acciones)
+
+        return card
+
+    def _confirmar_eliminar(self, task_id: str) -> None:
+        r = QMessageBox.question(
+            self,
+            "Confirmación",
+            "¿Estás seguro de eliminar esta tarea?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if r == QMessageBox.StandardButton.Yes:
+            self._controlador.eliminar_tarea(task_id)
+
+    def _format_date(self, date: datetime) -> str:
+        now = datetime.now()
+        diff_days = abs((now.date() - date.date()).days)
+
+        if diff_days == 0:
+            return "Hoy"
+        if diff_days == 1:
+            return "Ayer"
+        if diff_days < 7:
+            return f"Hace {diff_days} días"
+        return date.strftime("%d %b %Y")

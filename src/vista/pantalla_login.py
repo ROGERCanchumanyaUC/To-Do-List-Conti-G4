@@ -1,111 +1,100 @@
+# src/vista/pantalla_login.py
 from __future__ import annotations
 
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
 
-from src.vista.dialogos import mostrar_error
+from src.vista.controlador_tareas_vista import SesionVista
 
 
 class PantallaLogin(QWidget):
-    """Pantalla de Login (solo UI)."""
+    iniciar_sesion = pyqtSignal(SesionVista)
 
-    iniciar_sesion = pyqtSignal(str, str)  # username, password
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
+    def __init__(self) -> None:
+        super().__init__()
         self.setObjectName("LoginRoot")
 
         self._input_usuario = QLineEdit()
-        self._input_usuario.setPlaceholderText("Usuario")
+        self._input_password = QLineEdit()
+        self._btn_ingresar = QPushButton("Iniciar sesión")
 
-        self._input_clave = QLineEdit()
-        self._input_clave.setPlaceholderText("Contraseña")
-        self._input_clave.setEchoMode(QLineEdit.EchoMode.Password)
+        self._construir_ui()
+        self._conectar_eventos()
 
-        btn_ingresar = QPushButton("Ingresar")
-        btn_ingresar.setObjectName("BtnPrimario")
-        btn_ingresar.clicked.connect(self._on_ingresar)
+    def _construir_ui(self) -> None:
+        layout_root = QVBoxLayout(self)
+        layout_root.setContentsMargins(24, 24, 24, 24)
 
-        btn_limpiar = QPushButton("Limpiar")
-        btn_limpiar.setObjectName("BtnSecundario")
-        btn_limpiar.clicked.connect(self._on_limpiar)
-
-        acciones = QHBoxLayout()
-        acciones.addWidget(btn_limpiar)
-        acciones.addWidget(btn_ingresar)
-
-        header = QFrame()
-        header.setObjectName("LoginHeader")
-        header_layout = QVBoxLayout(header)
-        header_layout.setContentsMargins(18, 18, 18, 18)
-
-        title = QLabel("Iniciar Sesión")
-        title.setObjectName("LoginTitle")
-
-        subtitle = QLabel("Ingresa tus credenciales para entrar al Dashboard.")
-        subtitle.setObjectName("LoginSubtitle")
-
-        header_layout.addWidget(title)
-        header_layout.addWidget(subtitle)
+        layout_root.addStretch(1)
 
         card = QFrame()
         card.setObjectName("LoginCard")
-
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(0, 0, 0, 0)
-        card_layout.setSpacing(0)
-        card_layout.addWidget(header)
-
-        form = QWidget()
-        form_layout = QGridLayout(form)
-        form_layout.setContentsMargins(18, 18, 18, 18)
-        form_layout.setHorizontalSpacing(12)
-        form_layout.setVerticalSpacing(12)
-
-        form_layout.addWidget(QLabel("Usuario"), 0, 0)
-        form_layout.addWidget(self._input_usuario, 1, 0)
-
-        form_layout.addWidget(QLabel("Contraseña"), 2, 0)
-        form_layout.addWidget(self._input_clave, 3, 0)
-
-        form_layout.addLayout(acciones, 4, 0)
-
-        card_layout.addWidget(form)
-
-        root = QVBoxLayout(self)
-        root.setContentsMargins(24, 24, 24, 24)
-        root.addStretch(1)
-
-        center = QHBoxLayout()
-        center.addStretch(1)
-        center.addWidget(card)
-        center.addStretch(1)
-
-        root.addLayout(center)
-        root.addStretch(1)
-
+        card.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         card.setFixedWidth(420)
 
-    def _on_limpiar(self) -> None:
-        self._input_usuario.clear()
-        self._input_clave.clear()
-        self._input_usuario.setFocus()
+        layout_card = QVBoxLayout(card)
+        layout_card.setContentsMargins(26, 26, 26, 26)
+        layout_card.setSpacing(14)
+
+        titulo = QLabel("Ingresar")
+        titulo.setObjectName("TituloGrande")
+
+        subtitulo = QLabel("Accede para gestionar tus tareas.")
+        subtitulo.setObjectName("Subtitulo")
+
+        self._input_usuario.setPlaceholderText("Usuario")
+        self._input_password.setPlaceholderText("Contraseña")
+        self._input_password.setEchoMode(QLineEdit.EchoMode.Password)
+
+        self._btn_ingresar.setObjectName("BotonPrimario")
+
+        layout_card.addWidget(titulo)
+        layout_card.addWidget(subtitulo)
+        layout_card.addSpacing(8)
+        layout_card.addWidget(self._input_usuario)
+        layout_card.addWidget(self._input_password)
+        layout_card.addSpacing(8)
+        layout_card.addWidget(self._btn_ingresar)
+
+        row_center = QHBoxLayout()
+        row_center.addStretch(1)
+        row_center.addWidget(card)
+        row_center.addStretch(1)
+
+        layout_root.addLayout(row_center)
+        layout_root.addStretch(2)
+
+    def _conectar_eventos(self) -> None:
+        self._btn_ingresar.clicked.connect(self._on_ingresar)
+        self._input_password.returnPressed.connect(self._on_ingresar)
 
     def _on_ingresar(self) -> None:
-        usuario = self._input_usuario.text().strip()
-        clave = self._input_clave.text()
+        usuario = (self._input_usuario.text() or "").strip()
+        password = (self._input_password.text() or "").strip()
 
-        if not usuario or not clave:
-            mostrar_error(self, "Validación", "Usuario y contraseña son obligatorios.")
+        if not usuario:
+            QMessageBox.warning(self, "Validación", "El usuario no puede estar vacío.")
+            self._input_usuario.setFocus()
             return
 
-        self.iniciar_sesion.emit(usuario, clave)
+        if not password:
+            QMessageBox.warning(self, "Validación", "La contraseña no puede estar vacía.")
+            self._input_password.setFocus()
+            return
+
+        self.iniciar_sesion.emit(SesionVista(username=usuario))
+
+    def limpiar(self) -> None:
+        self._input_usuario.clear()
+        self._input_password.clear()
+        self._input_usuario.setFocus()
