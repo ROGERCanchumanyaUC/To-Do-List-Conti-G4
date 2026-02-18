@@ -1,89 +1,107 @@
-# src/vista/ventana_principal.py
-from __future__ import annotations
+"""
+Ventana principal con QStackedWidget para navegacion entre pantallas.
+Indice 0: Login | Indice 1: Dashboard | Indice 2: Registrar Tarea
+"""
 
 from PyQt6.QtWidgets import QMainWindow, QStackedWidget
+from PyQt6.QtCore import Qt
 
-from src.vista.controlador_tareas_vista import ControladorTareasVista, SesionVista
-from src.vista.pantalla_dashboard import PantallaDashboard
 from src.vista.pantalla_login import PantallaLogin
+from src.vista.pantalla_dashboard import PantallaDashboard
 from src.vista.pantalla_registrar_tarea import PantallaRegistrarTarea
+from src.vista.controlador_tareas_vista import ControladorTareasVista
 
 
 class VentanaPrincipal(QMainWindow):
-    def __init__(self) -> None:
+    """Ventana principal que gestiona la navegacion entre pantallas."""
+
+    # Indices del QStackedWidget
+    INDICE_LOGIN = 0
+    INDICE_DASHBOARD = 1
+    INDICE_REGISTRAR_TAREA = 2
+
+    def __init__(self):
         super().__init__()
-        self.setWindowTitle("To-Do List (PyQt)")
+        self.setWindowTitle("Todo App - Gestor de Tareas")
+        self.setMinimumSize(1024, 680)
+        self._usuario_actual = ""
+        self._configurar_ui()
+        self._conectar_senales()
 
-        self._controlador = ControladorTareasVista()
-        self._sesion: SesionVista | None = None
+    def _configurar_ui(self):
+        """Configura el QStackedWidget y las pantallas."""
+        self.stack = QStackedWidget()
+        self.setCentralWidget(self.stack)
 
-        self._stack = QStackedWidget()
-        self.setCentralWidget(self._stack)
+        # Pantalla de Login (indice 0)
+        self.pantalla_login = PantallaLogin()
+        self.stack.addWidget(self.pantalla_login)
 
-        self._login = PantallaLogin()
-        self._dashboard: PantallaDashboard | None = None
-        self._registro: PantallaRegistrarTarea | None = None
+        # Pantalla de Dashboard (indice 1)
+        self.pantalla_dashboard = PantallaDashboard()
+        self.stack.addWidget(self.pantalla_dashboard)
 
-        self._stack.addWidget(self._login)
-        self._stack.setCurrentWidget(self._login)
+        # Pantalla de Registrar Tarea (indice 2)
+        self.pantalla_registrar_tarea = PantallaRegistrarTarea()
+        self.stack.addWidget(self.pantalla_registrar_tarea)
 
-        self._login.iniciar_sesion.connect(self._on_iniciar_sesion)
-
-    def _on_iniciar_sesion(self, sesion: SesionVista) -> None:
-        self._sesion = sesion
-
-        self._dashboard = PantallaDashboard(sesion=sesion, controlador=self._controlador)
-        self._dashboard.logout_solicitado.connect(self._on_logout)
-        self._dashboard.registrar_tarea_solicitada.connect(self._abrir_registro_crear)
-        self._dashboard.editar_tarea_solicitada.connect(self._abrir_registro_editar)
-
-        self._stack.addWidget(self._dashboard)
-        self._stack.setCurrentWidget(self._dashboard)
-
-    def _on_logout(self) -> None:
-        self._sesion = None
-
-        self._login.limpiar()
-        self._stack.setCurrentWidget(self._login)
-
-        # Limpia pantallas para evitar estados colgados
-        if self._dashboard is not None:
-            self._stack.removeWidget(self._dashboard)
-            self._dashboard.deleteLater()
-            self._dashboard = None
-
-        if self._registro is not None:
-            self._stack.removeWidget(self._registro)
-            self._registro.deleteLater()
-            self._registro = None
-
-    def _abrir_registro_crear(self) -> None:
-        if self._sesion is None:
-            return
-
-        self._abrir_registro(task_id=None)
-
-    def _abrir_registro_editar(self, task_id: str) -> None:
-        if self._sesion is None:
-            return
-
-        self._abrir_registro(task_id=task_id)
-
-    def _abrir_registro(self, task_id: str | None) -> None:
-        # Re-crea pantalla de registro para tener estado limpio
-        if self._registro is not None:
-            self._stack.removeWidget(self._registro)
-            self._registro.deleteLater()
-            self._registro = None
-
-        self._registro = PantallaRegistrarTarea(
-            sesion=self._sesion, controlador=self._controlador, task_id=task_id
+        # Controlador de tareas (mediador UI)
+        self.controlador_tareas = ControladorTareasVista(
+            self.pantalla_registrar_tarea
         )
-        self._registro.volver_al_dashboard.connect(self._volver_dashboard)
 
-        self._stack.addWidget(self._registro)
-        self._stack.setCurrentWidget(self._registro)
+        # Iniciar en Login
+        self.stack.setCurrentIndex(self.INDICE_LOGIN)
 
-    def _volver_dashboard(self) -> None:
-        if self._dashboard is not None:
-            self._stack.setCurrentWidget(self._dashboard)
+    def _conectar_senales(self):
+        """Conecta las senales de navegacion entre pantallas."""
+        # Login -> Dashboard
+        self.pantalla_login.sesion_iniciada.connect(
+            self._al_iniciar_sesion
+        )
+
+        # Dashboard -> Registrar Tarea
+        self.pantalla_dashboard.registrar_tarea_clicked.connect(
+            self._ir_a_registrar_tarea
+        )
+
+        # Dashboard -> Login (cerrar sesion)
+        self.pantalla_dashboard.cerrar_sesion_clicked.connect(
+            self._al_cerrar_sesion
+        )
+
+        # Registrar Tarea -> Dashboard (volver)
+        self.pantalla_registrar_tarea.volver_clicked.connect(
+            self._volver_a_dashboard
+        )
+
+    def _al_iniciar_sesion(self, usuario: str):
+        """Maneja el evento de inicio de sesion."""
+        self._usuario_actual = usuario
+        self.pantalla_dashboard.establecer_usuario(usuario)
+        self._actualizar_estadisticas_dashboard()
+        self.stack.setCurrentIndex(self.INDICE_DASHBOARD)
+
+    def _al_cerrar_sesion(self):
+        """Maneja el evento de cierre de sesion."""
+        self._usuario_actual = ""
+        self.pantalla_login.limpiar()
+        self.stack.setCurrentIndex(self.INDICE_LOGIN)
+
+    def _ir_a_registrar_tarea(self):
+        """Navega a la pantalla de registro de tareas."""
+        self.stack.setCurrentIndex(self.INDICE_REGISTRAR_TAREA)
+
+    def _volver_a_dashboard(self):
+        """Vuelve al dashboard y actualiza estadisticas."""
+        self._actualizar_estadisticas_dashboard()
+        self.stack.setCurrentIndex(self.INDICE_DASHBOARD)
+
+    def _actualizar_estadisticas_dashboard(self):
+        """Actualiza las estadisticas del dashboard con datos mock."""
+        stats = self.controlador_tareas.obtener_estadisticas()
+        self.pantalla_dashboard.actualizar_estadisticas(
+            total=stats["total"],
+            pendientes=stats["pendientes"],
+            completadas=stats["completadas"],
+        )

@@ -1,100 +1,148 @@
-# src/vista/pantalla_login.py
-from __future__ import annotations
+"""
+Pantalla de inicio de sesion con fondo degradado y card centrado.
+"""
 
-from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import (
-    QFrame,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QMessageBox,
-    QPushButton,
-    QSizePolicy,
-    QVBoxLayout,
-    QWidget,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
+    QLineEdit, QPushButton, QFrame, QSpacerItem,
+    QSizePolicy
 )
-
-from src.vista.controlador_tareas_vista import SesionVista
+from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtGui import QFont
 
 
 class PantallaLogin(QWidget):
-    iniciar_sesion = pyqtSignal(SesionVista)
+    """Pantalla de login a pantalla completa con card centrado."""
 
-    def __init__(self) -> None:
-        super().__init__()
-        self.setObjectName("LoginRoot")
+    sesion_iniciada = pyqtSignal(str)
 
-        self._input_usuario = QLineEdit()
-        self._input_password = QLineEdit()
-        self._btn_ingresar = QPushButton("Iniciar sesión")
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setProperty("cssClass", "login-fondo")
+        self._configurar_ui()
 
-        self._construir_ui()
-        self._conectar_eventos()
+    def _configurar_ui(self):
+        """Configura la interfaz de la pantalla de login."""
+        # Layout principal que centra el card
+        layout_principal = QVBoxLayout(self)
+        layout_principal.setContentsMargins(0, 0, 0, 0)
 
-    def _construir_ui(self) -> None:
-        layout_root = QVBoxLayout(self)
-        layout_root.setContentsMargins(24, 24, 24, 24)
+        # Contenedor horizontal para centrar
+        layout_horizontal = QHBoxLayout()
+        layout_horizontal.setContentsMargins(0, 0, 0, 0)
 
-        layout_root.addStretch(1)
+        # Espaciadores para centrar vertical y horizontalmente
+        layout_principal.addStretch(1)
+        layout_principal.addLayout(layout_horizontal)
+        layout_principal.addStretch(1)
 
-        card = QFrame()
-        card.setObjectName("LoginCard")
-        card.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        card.setFixedWidth(420)
+        layout_horizontal.addStretch(1)
 
-        layout_card = QVBoxLayout(card)
-        layout_card.setContentsMargins(26, 26, 26, 26)
-        layout_card.setSpacing(14)
+        # Card de login
+        self.card = QFrame()
+        self.card.setProperty("cssClass", "login-card")
+        self.card.setFixedWidth(420)
+        self.card.setMaximumHeight(520)
+        self.card.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred
+        )
 
-        titulo = QLabel("Ingresar")
-        titulo.setObjectName("TituloGrande")
+        card_layout = QVBoxLayout(self.card)
+        card_layout.setContentsMargins(40, 44, 40, 40)
+        card_layout.setSpacing(8)
 
-        subtitulo = QLabel("Accede para gestionar tus tareas.")
-        subtitulo.setObjectName("Subtitulo")
+        # Icono / Branding
+        lbl_icono = QLabel("\u2713")
+        lbl_icono.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        fuente_icono = QFont()
+        fuente_icono.setPointSize(28)
+        fuente_icono.setBold(True)
+        lbl_icono.setFont(fuente_icono)
+        card_layout.addWidget(lbl_icono)
 
-        self._input_usuario.setPlaceholderText("Usuario")
-        self._input_password.setPlaceholderText("Contraseña")
-        self._input_password.setEchoMode(QLineEdit.EchoMode.Password)
+        card_layout.addSpacing(4)
 
-        self._btn_ingresar.setObjectName("BotonPrimario")
+        # Titulo
+        lbl_titulo = QLabel("Iniciar Sesion")
+        lbl_titulo.setProperty("cssClass", "titulo")
+        lbl_titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_layout.addWidget(lbl_titulo)
 
-        layout_card.addWidget(titulo)
-        layout_card.addWidget(subtitulo)
-        layout_card.addSpacing(8)
-        layout_card.addWidget(self._input_usuario)
-        layout_card.addWidget(self._input_password)
-        layout_card.addSpacing(8)
-        layout_card.addWidget(self._btn_ingresar)
+        # Subtitulo
+        lbl_subtitulo = QLabel("Ingresa tus credenciales para continuar")
+        lbl_subtitulo.setProperty("cssClass", "subtitulo")
+        lbl_subtitulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_layout.addWidget(lbl_subtitulo)
 
-        row_center = QHBoxLayout()
-        row_center.addStretch(1)
-        row_center.addWidget(card)
-        row_center.addStretch(1)
+        card_layout.addSpacing(24)
 
-        layout_root.addLayout(row_center)
-        layout_root.addStretch(2)
+        # Campo: Usuario
+        lbl_usuario = QLabel("Usuario")
+        lbl_usuario.setStyleSheet("font-weight: 500; font-size: 13px;")
+        card_layout.addWidget(lbl_usuario)
 
-    def _conectar_eventos(self) -> None:
-        self._btn_ingresar.clicked.connect(self._on_ingresar)
-        self._input_password.returnPressed.connect(self._on_ingresar)
+        self.txt_usuario = QLineEdit()
+        self.txt_usuario.setPlaceholderText("Ingresa tu usuario")
+        self.txt_usuario.setMinimumHeight(44)
+        card_layout.addWidget(self.txt_usuario)
 
-    def _on_ingresar(self) -> None:
-        usuario = (self._input_usuario.text() or "").strip()
-        password = (self._input_password.text() or "").strip()
+        card_layout.addSpacing(12)
 
+        # Campo: Contrasena
+        lbl_contrasena = QLabel("Contrasena")
+        lbl_contrasena.setStyleSheet("font-weight: 500; font-size: 13px;")
+        card_layout.addWidget(lbl_contrasena)
+
+        self.txt_contrasena = QLineEdit()
+        self.txt_contrasena.setPlaceholderText("Ingresa tu contrasena")
+        self.txt_contrasena.setEchoMode(QLineEdit.EchoMode.Password)
+        self.txt_contrasena.setMinimumHeight(44)
+        card_layout.addWidget(self.txt_contrasena)
+
+        card_layout.addSpacing(8)
+
+        # Label de error (oculto por defecto)
+        self.lbl_error = QLabel("")
+        self.lbl_error.setProperty("cssClass", "error")
+        self.lbl_error.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_error.setVisible(False)
+        self.lbl_error.setWordWrap(True)
+        card_layout.addWidget(self.lbl_error)
+
+        card_layout.addSpacing(8)
+
+        # Boton: Iniciar sesion
+        self.btn_iniciar_sesion = QPushButton("Iniciar Sesion")
+        self.btn_iniciar_sesion.setMinimumHeight(46)
+        self.btn_iniciar_sesion.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        card_layout.addWidget(self.btn_iniciar_sesion)
+
+        card_layout.addStretch()
+
+        layout_horizontal.addWidget(self.card)
+        layout_horizontal.addStretch(1)
+
+        # Conectar senal del boton (mock: emite usuario sin validar)
+        self.btn_iniciar_sesion.clicked.connect(self._al_iniciar_sesion)
+        self.txt_contrasena.returnPressed.connect(self._al_iniciar_sesion)
+
+    def _al_iniciar_sesion(self):
+        """Emite la senal sesion_iniciada con el nombre de usuario (mock)."""
+        usuario = self.txt_usuario.text().strip()
         if not usuario:
-            QMessageBox.warning(self, "Validación", "El usuario no puede estar vacío.")
-            self._input_usuario.setFocus()
-            return
+            usuario = "Usuario"
+        self.sesion_iniciada.emit(usuario)
 
-        if not password:
-            QMessageBox.warning(self, "Validación", "La contraseña no puede estar vacía.")
-            self._input_password.setFocus()
-            return
+    def mostrar_error(self, mensaje: str):
+        """Muestra un mensaje de error en el label."""
+        self.lbl_error.setText(mensaje)
+        self.lbl_error.setVisible(True)
 
-        self.iniciar_sesion.emit(SesionVista(username=usuario))
-
-    def limpiar(self) -> None:
-        self._input_usuario.clear()
-        self._input_password.clear()
-        self._input_usuario.setFocus()
+    def limpiar(self):
+        """Limpia los campos del formulario."""
+        self.txt_usuario.clear()
+        self.txt_contrasena.clear()
+        self.lbl_error.setVisible(False)
+        self.lbl_error.setText("")

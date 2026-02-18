@@ -1,273 +1,208 @@
-# src/vista/controlador_tareas_vista.py
-from __future__ import annotations
+"""
+Controlador de UI / mediador para la vista CRUD de tareas.
+Mantiene una lista mock en memoria y conecta senales de los widgets.
+NO usa SQLAlchemy ni accede a base de datos.
+"""
 
-from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
-
-from PyQt6.QtCore import QObject, pyqtSignal
-
-
-@dataclass(frozen=True)
-class SesionVista:
-    """Datos mínimos de sesión para la capa vista."""
-    username: str
+from PyQt6.QtWidgets import QTableWidgetItem, QMessageBox
+from PyQt6.QtCore import Qt
 
 
-@dataclass
-class TareaVista:
-    """Modelo temporal para la vista (luego se conectará con la BD/lógica)."""
-    id: str
-    name: str
-    category: str
-    time_value: int
-    time_unit: str
-    detail: str
-    completed: bool
-    created_at: datetime
+class ControladorTareasVista:
+    """Mediador entre los widgets de la vista CRUD de tareas."""
 
+    def __init__(self, vista_registrar_tarea):
+        """
+        Inicializa el controlador con referencia a la vista CRUD.
 
-def cargar_estilos_qss() -> str:
-    """
-    Carga estilos desde src/vista/estilos.qss si existe.
-    Si no existe, usa un QSS base integrado.
-    """
-    ruta_qss = Path(__file__).with_name("estilos.qss")
-    if ruta_qss.exists():
-        return ruta_qss.read_text(encoding="utf-8")
+        Args:
+            vista_registrar_tarea: Instancia de PantallaRegistrarTarea.
+        """
+        self.vista = vista_registrar_tarea
+        self._tareas_mock: list[dict] = []
+        self._id_siguiente: int = 1
+        self._indice_seleccionado: int | None = None
 
-    # Fallback (estilo base)
-    return """
-    QWidget { font-family: "Segoe UI"; font-size: 14px; }
-    QWidget#LoginRoot, QWidget#DashboardRoot {
-        background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-            stop:0 #eff6ff, stop:1 #f5f3ff);
-    }
+        self._conectar_senales()
+        self._actualizar_tabla()
 
-    QFrame#LoginCard, QFrame#PanelBlanco, QFrame#Card {
-        background: #ffffff;
-        border: 1px solid rgba(0,0,0,0.10);
-        border-radius: 14px;
-    }
-
-    QLabel#TituloGrande { font-size: 26px; font-weight: 700; color: #111827; }
-    QLabel#Subtitulo { color: #6b7280; }
-    QLabel#TextoPequeno { color: #6b7280; }
-
-    QLineEdit, QTextEdit, QSpinBox, QComboBox {
-        background: #f3f3f5;
-        border: 2px solid #d1d5db;
-        border-radius: 10px;
-        padding: 10px;
-        color: #111827;
-    }
-    QLineEdit:focus, QTextEdit:focus, QSpinBox:focus, QComboBox:focus {
-        border: 2px solid #2563eb;
-        outline: none;
-    }
-
-    QPushButton#BotonPrimario {
-        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-            stop:0 #2563eb, stop:1 #7c3aed);
-        color: white;
-        border: none;
-        border-radius: 12px;
-        padding: 10px 14px;
-        font-weight: 700;
-    }
-    QPushButton#BotonPrimario:hover {
-        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-            stop:0 #1d4ed8, stop:1 #6d28d9);
-    }
-
-    QPushButton#BotonSecundario {
-        background: #e5e7eb;
-        color: #111827;
-        border: none;
-        border-radius: 12px;
-        padding: 10px 14px;
-        font-weight: 700;
-    }
-    QPushButton#BotonSecundario:hover { background: #d1d5db; }
-
-    QFrame#Header {
-        background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-            stop:0 #2563eb, stop:1 #7c3aed);
-        border: none;
-    }
-    QLabel#HeaderTitulo { color: white; font-size: 24px; font-weight: 800; }
-    QLabel#HeaderUsuario { color: rgba(255,255,255,0.85); }
-
-    QPushButton#BotonLogout {
-        background: #ffffff;
-        color: #2563eb;
-        border: none;
-        border-radius: 12px;
-        padding: 10px 14px;
-        font-weight: 800;
-    }
-    QPushButton#BotonLogout:hover { background: #eff6ff; }
-
-    QPushButton#Chip {
-        background: #f3f4f6;
-        color: #111827;
-        border: none;
-        border-radius: 12px;
-        padding: 8px 12px;
-        font-weight: 700;
-    }
-    QPushButton#Chip[activo="true"] {
-        background: #2563eb;
-        color: white;
-    }
-
-    QFrame#TaskCard {
-        background: #ffffff;
-        border: 2px solid #e5e7eb;
-        border-radius: 14px;
-    }
-    QFrame#TaskCard:hover { border: 2px solid #c7d2fe; }
-
-    QPushButton#LinkNaranja {
-        color: #f97316;
-        background: transparent;
-        border: none;
-        font-weight: 700;
-        text-align: left;
-    }
-    QPushButton#LinkNaranja:hover { background: #fff7ed; border-radius: 10px; padding: 8px; }
-
-    QPushButton#LinkRojo {
-        color: #ef4444;
-        background: transparent;
-        border: none;
-        font-weight: 700;
-        text-align: left;
-    }
-    QPushButton#LinkRojo:hover { background: #fef2f2; border-radius: 10px; padding: 8px; }
-
-    QLabel#Badge {
-        border-radius: 999px;
-        padding: 4px 10px;
-        font-weight: 700;
-    }
-    QLabel#BadgeAzul { background: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd; }
-    QLabel#BadgeRojo { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
-    QLabel#BadgeAmarillo { background: #fef9c3; color: #a16207; border: 1px solid #fde68a; }
-    QLabel#BadgeGris { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
-    QLabel#BadgeVerde { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-    """
-
-
-class ControladorTareasVista(QObject):
-    """
-    Controlador de estado para la vista (sin BD por ahora).
-    Luego se conectará con la lógica real.
-    """
-
-    datos_cambiaron = pyqtSignal()
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._tareas: list[TareaVista] = []
-        self._search_query: str = ""
-        self._category_filter: str = "todas"
-        self._mostrar_tutorial: bool = True
-
-    # -------------------
-    # Estado UI
-    # -------------------
-    @property
-    def mostrar_tutorial(self) -> bool:
-        return self._mostrar_tutorial
-
-    def cerrar_tutorial(self) -> None:
-        self._mostrar_tutorial = False
-        self.datos_cambiaron.emit()
-
-    @property
-    def tareas(self) -> list[TareaVista]:
-        return list(self._tareas)
-
-    def set_search_query(self, texto: str) -> None:
-        self._search_query = (texto or "").strip()
-        self.datos_cambiaron.emit()
-
-    def set_category_filter(self, filtro: str) -> None:
-        self._category_filter = filtro
-        self.datos_cambiaron.emit()
-
-    # -------------------
-    # CRUD (vista)
-    # -------------------
-    def agregar_tarea(
-        self,
-        *,
-        name: str,
-        category: str,
-        time_value: int,
-        time_unit: str,
-        detail: str,
-    ) -> None:
-        tarea = TareaVista(
-            id=str(int(datetime.now().timestamp() * 1000)),
-            name=name,
-            category=category,
-            time_value=int(time_value),
-            time_unit=time_unit,
-            detail=detail,
-            completed=False,
-            created_at=datetime.now(),
+    def _conectar_senales(self):
+        """Conecta las senales de los botones y la tabla."""
+        self.vista.btn_guardar.clicked.connect(self._guardar_tarea)
+        self.vista.btn_actualizar.clicked.connect(
+            self._actualizar_tarea_seleccionada
         )
-        self._tareas.append(tarea)
-        self.datos_cambiaron.emit()
+        self.vista.btn_eliminar.clicked.connect(
+            self._eliminar_tarea_seleccionada
+        )
+        self.vista.btn_limpiar.clicked.connect(self._limpiar)
+        self.vista.tabla_tareas.itemSelectionChanged.connect(
+            self._al_seleccionar_fila
+        )
 
-    def editar_tarea(
-        self,
-        task_id: str,
-        *,
-        name: str,
-        category: str,
-        time_value: int,
-        time_unit: str,
-        detail: str,
-    ) -> None:
-        for t in self._tareas:
-            if t.id == task_id:
-                t.name = name
-                t.category = category
-                t.time_value = int(time_value)
-                t.time_unit = time_unit
-                t.detail = detail
-                break
-        self.datos_cambiaron.emit()
+    def _guardar_tarea(self):
+        """Crea una nueva tarea con los datos del formulario."""
+        datos = self.vista.obtener_datos_formulario()
 
-    def alternar_completada(self, task_id: str) -> None:
-        for t in self._tareas:
-            if t.id == task_id:
-                t.completed = not t.completed
-                break
-        self.datos_cambiaron.emit()
+        if not datos["titulo"]:
+            QMessageBox.warning(
+                self.vista,
+                "Campo requerido",
+                "El titulo de la tarea es obligatorio.",
+            )
+            return
 
-    def eliminar_tarea(self, task_id: str) -> None:
-        self._tareas = [t for t in self._tareas if t.id != task_id]
-        self.datos_cambiaron.emit()
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        tarea = {
+            "id_tarea": self._id_siguiente,
+            "titulo": datos["titulo"],
+            "descripcion": datos["descripcion"],
+            "completada": datos["completada"],
+            "creada_en": ahora,
+            "actualizada_en": ahora,
+        }
 
-    # -------------------
-    # Filtros
-    # -------------------
-    def tareas_filtradas(self) -> list[TareaVista]:
-        tareas = self._tareas
+        self._tareas_mock.append(tarea)
+        self._id_siguiente += 1
+        self._limpiar()
+        self._actualizar_tabla()
 
-        if self._search_query:
-            q = self._search_query.lower()
-            tareas = [t for t in tareas if q in t.name.lower()]
+    def _actualizar_tarea_seleccionada(self):
+        """Actualiza la tarea seleccionada con los datos del formulario."""
+        if self._indice_seleccionado is None:
+            QMessageBox.information(
+                self.vista,
+                "Seleccion requerida",
+                "Selecciona una tarea de la tabla para actualizar.",
+            )
+            return
 
-        if self._category_filter == "completadas":
-            tareas = [t for t in tareas if t.completed]
-        elif self._category_filter == "todas":
-            pass
-        else:
-            tareas = [t for t in tareas if (not t.completed and t.category == self._category_filter)]
+        datos = self.vista.obtener_datos_formulario()
 
-        return list(tareas)
+        if not datos["titulo"]:
+            QMessageBox.warning(
+                self.vista,
+                "Campo requerido",
+                "El titulo de la tarea es obligatorio.",
+            )
+            return
+
+        tarea = self._tareas_mock[self._indice_seleccionado]
+        tarea["titulo"] = datos["titulo"]
+        tarea["descripcion"] = datos["descripcion"]
+        tarea["completada"] = datos["completada"]
+        tarea["actualizada_en"] = datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+        self._limpiar()
+        self._actualizar_tabla()
+
+    def _eliminar_tarea_seleccionada(self):
+        """Elimina la tarea seleccionada de la lista mock."""
+        if self._indice_seleccionado is None:
+            QMessageBox.information(
+                self.vista,
+                "Seleccion requerida",
+                "Selecciona una tarea de la tabla para eliminar.",
+            )
+            return
+
+        respuesta = QMessageBox.question(
+            self.vista,
+            "Confirmar eliminacion",
+            "Estas seguro de que deseas eliminar esta tarea?",
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No,
+        )
+
+        if respuesta == QMessageBox.StandardButton.Yes:
+            del self._tareas_mock[self._indice_seleccionado]
+            self._limpiar()
+            self._actualizar_tabla()
+
+    def _limpiar(self):
+        """Limpia el formulario y la seleccion."""
+        self._indice_seleccionado = None
+        self.vista.limpiar_formulario()
+
+    def _al_seleccionar_fila(self):
+        """Maneja la seleccion de una fila en la tabla."""
+        filas_seleccionadas = (
+            self.vista.tabla_tareas.selectionModel().selectedRows()
+        )
+
+        if not filas_seleccionadas:
+            self._indice_seleccionado = None
+            return
+
+        fila = filas_seleccionadas[0].row()
+        self._indice_seleccionado = fila
+        tarea = self._tareas_mock[fila]
+
+        self.vista.cargar_datos_formulario({
+            "titulo": tarea["titulo"],
+            "descripcion": tarea["descripcion"],
+            "completada": tarea["completada"],
+        })
+
+    def _actualizar_tabla(self):
+        """Reconstruye la tabla con los datos mock actuales."""
+        tabla = self.vista.tabla_tareas
+        tabla.setRowCount(0)
+
+        hay_tareas = len(self._tareas_mock) > 0
+        tabla.setVisible(hay_tareas)
+        self.vista.lbl_tabla_vacia.setVisible(not hay_tareas)
+
+        for fila, tarea in enumerate(self._tareas_mock):
+            tabla.insertRow(fila)
+
+            tabla.setItem(
+                fila, 0,
+                QTableWidgetItem(str(tarea["id_tarea"]))
+            )
+            tabla.setItem(
+                fila, 1,
+                QTableWidgetItem(tarea["titulo"])
+            )
+            tabla.setItem(
+                fila, 2,
+                QTableWidgetItem(tarea["descripcion"])
+            )
+            tabla.setItem(
+                fila, 3,
+                QTableWidgetItem(
+                    "Si" if tarea["completada"] else "No"
+                )
+            )
+            tabla.setItem(
+                fila, 4,
+                QTableWidgetItem(tarea["creada_en"])
+            )
+            tabla.setItem(
+                fila, 5,
+                QTableWidgetItem(tarea["actualizada_en"])
+            )
+
+            # Centrar ciertas columnas
+            for col in (0, 3):
+                item = tabla.item(fila, col)
+                if item:
+                    item.setTextAlignment(
+                        Qt.AlignmentFlag.AlignCenter
+                    )
+
+    def obtener_estadisticas(self) -> dict:
+        """Retorna estadisticas de las tareas mock."""
+        total = len(self._tareas_mock)
+        completadas = sum(
+            1 for t in self._tareas_mock if t["completada"]
+        )
+        pendientes = total - completadas
+        return {
+            "total": total,
+            "pendientes": pendientes,
+            "completadas": completadas,
+        }
