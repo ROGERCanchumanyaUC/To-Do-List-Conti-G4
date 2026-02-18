@@ -1,6 +1,6 @@
 """
-Vista para registrar una nueva tarea - formulario simple sin tabla.
-Solo titulo, descripcion, y botones Guardar/Cancelar.
+Vista para registrar/editar una tarea.
+Formulario centrado: titulo, descripcion, y botones Guardar/Cancelar.
 """
 
 from PyQt6.QtWidgets import (
@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QFrame,
     QLineEdit,
     QTextEdit,
@@ -17,6 +16,8 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QColor
+
+from src.vista.animaciones import BotonAnimado
 
 
 class PantallaRegistrarTarea(QWidget):
@@ -39,40 +40,43 @@ class PantallaRegistrarTarea(QWidget):
         # ===== HEADER =====
         header = QFrame()
         header.setProperty("cssClass", "header-bar")
-        header.setFixedHeight(68)
+        header.setFixedHeight(72)
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(32, 0, 32, 0)
+        header_layout.setContentsMargins(36, 0, 36, 0)
 
-        self.btn_volver = QPushButton("\u2190  Volver")
-        self.btn_volver.setProperty("cssClass", "ghost")
-        self.btn_volver.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_volver.setMinimumHeight(38)
+        self.btn_volver = BotonAnimado(
+            "\u2190  Volver",
+            color_sombra="#ffffff",
+            intensidad_sombra=30,
+            blur_reposo=0,
+            blur_hover=12.0,
+        )
+        self.btn_volver.setProperty("cssClass", "btn-volver")
+        self.btn_volver.setMinimumHeight(40)
         header_layout.addWidget(self.btn_volver)
 
         header_layout.addStretch()
 
         self.lbl_titulo_header = QLabel("Registrar Tarea")
         self.lbl_titulo_header.setStyleSheet(
-            "font-size: 18px; font-weight: 700; color: #ffffff;"
+            "font-size: 20px; font-weight: 800; color: #ffffff;"
+            "letter-spacing: -0.3px;"
         )
         header_layout.addWidget(self.lbl_titulo_header)
 
         header_layout.addStretch()
 
         spacer = QWidget()
-        spacer.setFixedWidth(100)
+        spacer.setFixedWidth(110)
         header_layout.addWidget(spacer)
 
         layout_externo.addWidget(header)
 
         # ===== CONTENIDO CENTRADO =====
         contenido = QWidget()
-        contenido.setStyleSheet(
-            "background: qlineargradient("
-            "x1:0, y1:0, x2:1, y2:1, stop:0 #dbeafe, stop:1 #ffffff);"
-        )
+        contenido.setStyleSheet("background-color: #e8ecf1;")
         contenido_layout = QVBoxLayout(contenido)
-        contenido_layout.setContentsMargins(0, 48, 0, 48)
+        contenido_layout.setContentsMargins(0, 52, 0, 52)
         contenido_layout.setSpacing(0)
 
         contenido_layout.addStretch()
@@ -82,24 +86,45 @@ class PantallaRegistrarTarea(QWidget):
         # --- CARD FORMULARIO ---
         panel_form = QFrame()
         panel_form.setProperty("cssClass", "card")
-        panel_form.setFixedWidth(520)
+        panel_form.setFixedWidth(540)
         panel_form.setSizePolicy(
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred
         )
 
         sombra_form = QGraphicsDropShadowEffect(panel_form)
-        sombra_form.setBlurRadius(30)
-        sombra_form.setOffset(0, 6)
-        sombra_form.setColor(QColor(0, 0, 0, 18))
+        sombra_form.setBlurRadius(40)
+        sombra_form.setOffset(0, 8)
+        sombra_form.setColor(QColor(79, 70, 229, 22))
         panel_form.setGraphicsEffect(sombra_form)
 
         form_layout = QVBoxLayout(panel_form)
-        form_layout.setContentsMargins(40, 40, 40, 40)
+        form_layout.setContentsMargins(44, 44, 44, 44)
         form_layout.setSpacing(0)
+
+        # Icono del formulario
+        icono_container = QHBoxLayout()
+        icono_container.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        lbl_icono = QLabel()
+        lbl_icono.setFixedSize(48, 48)
+        lbl_icono.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_icono.setStyleSheet(
+            "background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
+            "stop:0 #7c3aed, stop:1 #4f46e5);"
+            "border-radius: 24px;"
+            "color: #ffffff;"
+            "font-size: 20px;"
+            "font-weight: 700;"
+        )
+        lbl_icono.setText("\u270E")
+        icono_container.addWidget(lbl_icono)
+        form_layout.addLayout(icono_container)
+
+        form_layout.addSpacing(18)
 
         self.lbl_form_titulo = QLabel("Nueva Tarea")
         self.lbl_form_titulo.setStyleSheet(
-            "font-size: 22px; font-weight: 700; color: #1a1a2e;"
+            "font-size: 24px; font-weight: 800; color: #1a1a2e;"
         )
         self.lbl_form_titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         form_layout.addWidget(self.lbl_form_titulo)
@@ -114,7 +139,7 @@ class PantallaRegistrarTarea(QWidget):
         self.lbl_form_desc.setWordWrap(True)
         form_layout.addWidget(self.lbl_form_desc)
 
-        form_layout.addSpacing(32)
+        form_layout.addSpacing(36)
 
         # Campo: Titulo
         lbl_titulo_campo = QLabel("Titulo")
@@ -125,10 +150,10 @@ class PantallaRegistrarTarea(QWidget):
 
         self.txt_titulo = QLineEdit()
         self.txt_titulo.setPlaceholderText("Titulo de la tarea")
-        self.txt_titulo.setMinimumHeight(46)
+        self.txt_titulo.setMinimumHeight(48)
         form_layout.addWidget(self.txt_titulo)
 
-        form_layout.addSpacing(20)
+        form_layout.addSpacing(22)
 
         # Campo: Descripcion
         lbl_descripcion = QLabel("Descripcion")
@@ -139,26 +164,50 @@ class PantallaRegistrarTarea(QWidget):
 
         self.txt_descripcion = QTextEdit()
         self.txt_descripcion.setPlaceholderText("Descripcion de la tarea...")
-        self.txt_descripcion.setMinimumHeight(120)
-        self.txt_descripcion.setMaximumHeight(160)
+        self.txt_descripcion.setMinimumHeight(130)
+        self.txt_descripcion.setMaximumHeight(170)
         form_layout.addWidget(self.txt_descripcion)
 
-        form_layout.addSpacing(32)
+        form_layout.addSpacing(36)
 
-        # Botones: Guardar y Cancelar
+        # Botones: Cancelar y Guardar (animados, colores distintos)
         botones_layout = QHBoxLayout()
-        botones_layout.setSpacing(12)
+        botones_layout.setSpacing(14)
 
-        self.btn_cancelar = QPushButton("Cancelar")
-        self.btn_cancelar.setProperty("cssClass", "secondary")
-        self.btn_cancelar.setMinimumHeight(46)
-        self.btn_cancelar.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_cancelar = BotonAnimado(
+            "Cancelar",
+            color_sombra="#4b5563",
+            intensidad_sombra=50,
+            blur_reposo=2.0,
+            blur_hover=16.0,
+        )
+        self.btn_cancelar.setProperty("cssClass", "btn-cancelar")
+        self.btn_cancelar.setMinimumHeight(48)
+        self.btn_cancelar.setStyleSheet(
+            "QPushButton { background-color: #d1d5db; color: #1a1a2e;"
+            " border: none; border-radius: 12px; padding: 11px 36px;"
+            " font-size: 14px; font-weight: 700; }"
+            "QPushButton:hover { background-color: #b0b5bd; }"
+            "QPushButton:pressed { background-color: #9ca3af; }"
+        )
         botones_layout.addWidget(self.btn_cancelar)
 
-        self.btn_guardar = QPushButton("Guardar")
-        self.btn_guardar.setProperty("cssClass", "guardar")  # <-- cambio mínimo
-        self.btn_guardar.setMinimumHeight(46)
-        self.btn_guardar.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_guardar = BotonAnimado(
+            "Guardar",
+            color_sombra="#7c3aed",
+            intensidad_sombra=60,
+            blur_reposo=2.0,
+            blur_hover=18.0,
+        )
+        self.btn_guardar.setProperty("cssClass", "btn-guardar")
+        self.btn_guardar.setMinimumHeight(48)
+        self.btn_guardar.setStyleSheet(
+            "QPushButton { background-color: #7c3aed; color: #1a1a2e;"
+            " border: none; border-radius: 12px; padding: 11px 36px;"
+            " font-size: 14px; font-weight: 700; }"
+            "QPushButton:hover { background-color: #6d28d9; }"
+            "QPushButton:pressed { background-color: #5b21b6; }"
+        )
         botones_layout.addWidget(self.btn_guardar)
 
         form_layout.addLayout(botones_layout)

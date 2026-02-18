@@ -1,5 +1,5 @@
 """
-Pantalla de inicio de sesion - diseño profesional con card centrado.
+Pantalla de inicio de sesion - card centrado con fondo degradado.
 """
 
 from PyQt6.QtWidgets import (
@@ -8,13 +8,14 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QPushButton,
     QFrame,
     QSizePolicy,
     QGraphicsDropShadowEffect,
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QColor
+
+from src.vista.animaciones import BotonAnimado
 
 
 class PantallaLogin(QWidget):
@@ -40,42 +41,45 @@ class PantallaLogin(QWidget):
 
         layout_horizontal.addStretch(1)
 
+        # --- CARD ---
         self.card = QFrame()
         self.card.setProperty("cssClass", "login-card")
-        self.card.setFixedWidth(420)
-        self.card.setMaximumHeight(540)
+        self.card.setFixedWidth(440)
+        self.card.setMaximumHeight(560)
         self.card.setSizePolicy(
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred
         )
 
         sombra = QGraphicsDropShadowEffect(self.card)
-        sombra.setBlurRadius(40)
-        sombra.setOffset(0, 8)
-        sombra.setColor(QColor(0, 0, 0, 25))
+        sombra.setBlurRadius(50)
+        sombra.setOffset(0, 12)
+        sombra.setColor(QColor(79, 70, 229, 30))
         self.card.setGraphicsEffect(sombra)
 
         card_layout = QVBoxLayout(self.card)
-        card_layout.setContentsMargins(44, 48, 44, 44)
+        card_layout.setContentsMargins(48, 52, 48, 48)
         card_layout.setSpacing(0)
 
+        # Icono
         icono_container = QHBoxLayout()
         icono_container.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         lbl_icono = QLabel()
-        lbl_icono.setFixedSize(52, 52)
+        lbl_icono.setFixedSize(56, 56)
         lbl_icono.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lbl_icono.setStyleSheet(
-            "background-color: #1a1a2e;"
-            "border-radius: 26px;"
+            "background: qlineargradient(x1:0, y1:0, x2:1, y2:1,"
+            "stop:0 #4f46e5, stop:1 #7c3aed);"
+            "border-radius: 28px;"
             "color: #ffffff;"
-            "font-size: 22px;"
+            "font-size: 24px;"
             "font-weight: 700;"
         )
         lbl_icono.setText("\u2713")
         icono_container.addWidget(lbl_icono)
         card_layout.addLayout(icono_container)
 
-        card_layout.addSpacing(20)
+        card_layout.addSpacing(22)
 
         lbl_titulo = QLabel("Bienvenido de vuelta")
         lbl_titulo.setProperty("cssClass", "titulo")
@@ -89,8 +93,9 @@ class PantallaLogin(QWidget):
         lbl_subtitulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         card_layout.addWidget(lbl_subtitulo)
 
-        card_layout.addSpacing(32)
+        card_layout.addSpacing(36)
 
+        # Campo: Usuario
         lbl_usuario = QLabel("Usuario")
         lbl_usuario.setProperty("cssClass", "campo-label")
         card_layout.addWidget(lbl_usuario)
@@ -99,11 +104,12 @@ class PantallaLogin(QWidget):
 
         self.txt_usuario = QLineEdit()
         self.txt_usuario.setPlaceholderText("Ingresa tu usuario")
-        self.txt_usuario.setMinimumHeight(44)
+        self.txt_usuario.setMinimumHeight(46)
         card_layout.addWidget(self.txt_usuario)
 
-        card_layout.addSpacing(18)
+        card_layout.addSpacing(20)
 
+        # Campo: Contrasena
         lbl_contrasena = QLabel("Contrasena")
         lbl_contrasena.setProperty("cssClass", "campo-label")
         card_layout.addWidget(lbl_contrasena)
@@ -113,11 +119,12 @@ class PantallaLogin(QWidget):
         self.txt_contrasena = QLineEdit()
         self.txt_contrasena.setPlaceholderText("Ingresa tu contrasena")
         self.txt_contrasena.setEchoMode(QLineEdit.EchoMode.Password)
-        self.txt_contrasena.setMinimumHeight(44)
+        self.txt_contrasena.setMinimumHeight(46)
         card_layout.addWidget(self.txt_contrasena)
 
         card_layout.addSpacing(10)
 
+        # Error
         self.lbl_error = QLabel("")
         self.lbl_error.setProperty("cssClass", "error")
         self.lbl_error.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -125,11 +132,18 @@ class PantallaLogin(QWidget):
         self.lbl_error.setWordWrap(True)
         card_layout.addWidget(self.lbl_error)
 
-        card_layout.addSpacing(12)
+        card_layout.addSpacing(14)
 
-        self.btn_iniciar_sesion = QPushButton("Iniciar Sesion")
-        self.btn_iniciar_sesion.setMinimumHeight(46)
-        self.btn_iniciar_sesion.setCursor(Qt.CursorShape.PointingHandCursor)
+        # Boton animado - Iniciar Sesion (navy oscuro con sombra indigo)
+        self.btn_iniciar_sesion = BotonAnimado(
+            "Iniciar Sesion",
+            color_sombra="#4f46e5",
+            intensidad_sombra=60,
+            blur_reposo=4.0,
+            blur_hover=22.0,
+        )
+        self.btn_iniciar_sesion.setProperty("cssClass", "btn-login")
+        self.btn_iniciar_sesion.setMinimumHeight(48)
         card_layout.addWidget(self.btn_iniciar_sesion)
 
         card_layout.addStretch()
@@ -137,12 +151,12 @@ class PantallaLogin(QWidget):
         layout_horizontal.addWidget(self.card)
         layout_horizontal.addStretch(1)
 
+        # Conexiones
         self.btn_iniciar_sesion.clicked.connect(self._al_iniciar_sesion)
         self.txt_contrasena.returnPressed.connect(self._al_iniciar_sesion)
         self.txt_usuario.returnPressed.connect(
             lambda: self.txt_contrasena.setFocus()
         )
-
         self.txt_usuario.textChanged.connect(self._ocultar_error)
         self.txt_contrasena.textChanged.connect(self._ocultar_error)
 

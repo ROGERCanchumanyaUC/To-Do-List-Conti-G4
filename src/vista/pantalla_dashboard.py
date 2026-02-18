@@ -1,5 +1,7 @@
 """
-Pantalla del dashboard principal - sin sidebar, con toolbar centrado.
+Pantalla del dashboard principal.
+Top bar con Cerrar Sesion a la derecha, Registrar Tarea + Buscar centrados.
+Secciones con fondos coloreados y tarjetas animadas.
 """
 
 from PyQt6.QtWidgets import (
@@ -7,40 +9,50 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
-    QPushButton,
     QFrame,
     QLineEdit,
     QScrollArea,
-    QGraphicsDropShadowEffect,
 )
 from PyQt6.QtCore import pyqtSignal, Qt
-from PyQt6.QtGui import QColor
+
+from src.vista.animaciones import BotonAnimado, TarjetaAnimada
 
 
-class TarjetaEstadistica(QFrame):
-    """Widget de card para mostrar una estadistica con icono."""
+# ------------------------------------------------------------------ #
+#  TARJETA DE ESTADISTICA (con color propio)
+# ------------------------------------------------------------------ #
+
+class TarjetaEstadistica(TarjetaAnimada):
+    """Card para mostrar una estadistica con icono y color propio."""
 
     def __init__(
         self,
         etiqueta: str,
         valor: int = 0,
         icono: str = "",
-        color_icono: str = "#0f3460",
+        variante: str = "blue",
         parent=None,
     ):
-        super().__init__(parent)
-        self.setProperty("cssClass", "stat-card")
-        self.setMinimumWidth(200)
-        self.setFixedHeight(120)
+        # Sombra tintada segun variante
+        colores_sombra = {
+            "blue": "#2563eb",
+            "amber": "#d97706",
+            "green": "#16a34a",
+        }
+        super().__init__(
+            color_sombra=colores_sombra.get(variante, "#000000"),
+            intensidad=25,
+            blur_reposo=6.0,
+            blur_hover=24.0,
+            parent=parent,
+        )
 
-        sombra = QGraphicsDropShadowEffect(self)
-        sombra.setBlurRadius(24)
-        sombra.setOffset(0, 4)
-        sombra.setColor(QColor(0, 0, 0, 15))
-        self.setGraphicsEffect(sombra)
+        self.setProperty("cssClass", f"stat-{variante}")
+        self.setMinimumWidth(210)
+        self.setFixedHeight(130)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(24, 20, 24, 20)
+        layout.setContentsMargins(26, 22, 26, 22)
         layout.setSpacing(4)
 
         top_row = QHBoxLayout()
@@ -53,14 +65,14 @@ class TarjetaEstadistica(QFrame):
         top_row.addStretch()
 
         lbl_icono = QLabel(icono)
-        lbl_icono.setStyleSheet(f"font-size: 22px; color: {color_icono};")
+        lbl_icono.setProperty("cssClass", f"stat-icono-{variante}")
         top_row.addWidget(lbl_icono)
 
         layout.addLayout(top_row)
-        layout.addSpacing(8)
+        layout.addSpacing(10)
 
         self.lbl_valor = QLabel(str(valor))
-        self.lbl_valor.setProperty("cssClass", "stat-valor")
+        self.lbl_valor.setProperty("cssClass", f"stat-valor-{variante}")
         layout.addWidget(self.lbl_valor)
 
         layout.addStretch()
@@ -69,8 +81,12 @@ class TarjetaEstadistica(QFrame):
         self.lbl_valor.setText(str(valor))
 
 
-class TarjetaTarea(QFrame):
-    """Card individual para mostrar una tarea."""
+# ------------------------------------------------------------------ #
+#  TARJETA DE TAREA (con borde lateral coloreado)
+# ------------------------------------------------------------------ #
+
+class TarjetaTarea(TarjetaAnimada):
+    """Card para mostrar una tarea con animacion de elevacion."""
 
     completar_clicked = pyqtSignal(int)
     editar_clicked = pyqtSignal(int)
@@ -85,19 +101,21 @@ class TarjetaTarea(QFrame):
         es_completada: bool = False,
         parent=None,
     ):
-        super().__init__(parent)
-        self._id_tarea = id_tarea
-        self.setProperty("cssClass", "task-card")
-        self.setCursor(Qt.CursorShape.ArrowCursor)
+        color_s = "#16a34a" if es_completada else "#d97706"
+        super().__init__(
+            color_sombra=color_s,
+            intensidad=18,
+            blur_reposo=4.0,
+            blur_hover=20.0,
+            parent=parent,
+        )
 
-        sombra = QGraphicsDropShadowEffect(self)
-        sombra.setBlurRadius(16)
-        sombra.setOffset(0, 2)
-        sombra.setColor(QColor(0, 0, 0, 10))
-        self.setGraphicsEffect(sombra)
+        self._id_tarea = id_tarea
+        css_card = "task-card-completada" if es_completada else "task-card-pendiente"
+        self.setProperty("cssClass", css_card)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(20, 18, 20, 18)
+        layout.setContentsMargins(22, 18, 22, 18)
         layout.setSpacing(6)
 
         # Fila superior: titulo + fecha
@@ -126,50 +144,86 @@ class TarjetaTarea(QFrame):
             lbl_desc.setMaximumHeight(50)
             layout.addWidget(lbl_desc)
 
-        layout.addSpacing(8)
+        layout.addSpacing(10)
 
+        # Botones
         btn_row = QHBoxLayout()
-        btn_row.setSpacing(8)
+        btn_row.setSpacing(10)
         btn_row.addStretch()
 
-        # Botones para tareas pendientes
         if not es_completada:
-            btn_completar = QPushButton("Completar")
-            btn_completar.setProperty("cssClass", "action-completar")
-            btn_completar.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn_completar.setFixedHeight(32)
+            btn_completar = BotonAnimado(
+                "Completar",
+                color_sombra="#16a34a",
+                intensidad_sombra=50,
+                blur_reposo=0,
+                blur_hover=14.0,
+            )
+            btn_completar.setProperty("cssClass", "btn-completar")
+            btn_completar.setFixedHeight(34)
+            btn_completar.setStyleSheet(
+                "QPushButton { background-color: #bbf7d0; color: #1a1a2e;"
+                " border: none; border-radius: 10px; padding: 7px 20px;"
+                " font-size: 12.5px; font-weight: 700; }"
+                "QPushButton:hover { background-color: #86efac; }"
+                "QPushButton:pressed { background-color: #4ade80; }"
+            )
             btn_completar.clicked.connect(
                 lambda: self.completar_clicked.emit(self._id_tarea)
             )
             btn_row.addWidget(btn_completar)
 
-            btn_editar = QPushButton("Editar")
-            btn_editar.setProperty("cssClass", "action-editar")
-            btn_editar.setCursor(Qt.CursorShape.PointingHandCursor)
-            btn_editar.setFixedHeight(32)
+            btn_editar = BotonAnimado(
+                "Editar",
+                color_sombra="#d97706",
+                intensidad_sombra=50,
+                blur_reposo=0,
+                blur_hover=14.0,
+            )
+            btn_editar.setProperty("cssClass", "btn-editar")
+            btn_editar.setFixedHeight(34)
+            btn_editar.setStyleSheet(
+                "QPushButton { background-color: #fde68a; color: #1a1a2e;"
+                " border: none; border-radius: 10px; padding: 7px 20px;"
+                " font-size: 12.5px; font-weight: 700; }"
+                "QPushButton:hover { background-color: #fcd34d; }"
+                "QPushButton:pressed { background-color: #fbbf24; }"
+            )
             btn_editar.clicked.connect(
                 lambda: self.editar_clicked.emit(self._id_tarea)
             )
             btn_row.addWidget(btn_editar)
-
-            layout.addLayout(btn_row)
-            return
-
-        # Botón Eliminar solo para tareas completadas
-        btn_eliminar = QPushButton("Eliminar")
-        btn_eliminar.setProperty("cssClass", "danger")
-        btn_eliminar.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_eliminar.setFixedHeight(32)
-        btn_eliminar.clicked.connect(
-            lambda: self.eliminar_clicked.emit(self._id_tarea)
-        )
-        btn_row.addWidget(btn_eliminar)
+        else:
+            btn_eliminar = BotonAnimado(
+                "Eliminar",
+                color_sombra="#dc2626",
+                intensidad_sombra=50,
+                blur_reposo=0,
+                blur_hover=14.0,
+            )
+            btn_eliminar.setProperty("cssClass", "btn-eliminar")
+            btn_eliminar.setFixedHeight(34)
+            btn_eliminar.setStyleSheet(
+                "QPushButton { background-color: #fecaca; color: #1a1a2e;"
+                " border: none; border-radius: 10px; padding: 7px 20px;"
+                " font-size: 12.5px; font-weight: 700; }"
+                "QPushButton:hover { background-color: #fca5a5; }"
+                "QPushButton:pressed { background-color: #f87171; }"
+            )
+            btn_eliminar.clicked.connect(
+                lambda: self.eliminar_clicked.emit(self._id_tarea)
+            )
+            btn_row.addWidget(btn_eliminar)
 
         layout.addLayout(btn_row)
 
 
+# ------------------------------------------------------------------ #
+#  DASHBOARD PRINCIPAL
+# ------------------------------------------------------------------ #
+
 class PantallaDashboard(QWidget):
-    """Pantalla principal del dashboard sin sidebar."""
+    """Pantalla principal del dashboard."""
 
     registrar_tarea_clicked = pyqtSignal()
     cerrar_sesion_clicked = pyqtSignal()
@@ -188,76 +242,89 @@ class PantallaDashboard(QWidget):
         layout_raiz.setContentsMargins(0, 0, 0, 0)
         layout_raiz.setSpacing(0)
 
-        # ===== TOP BAR =====
+        # ============ TOP BAR ============
         topbar = QFrame()
         topbar.setProperty("cssClass", "header-bar")
-        topbar.setFixedHeight(68)
+        topbar.setFixedHeight(72)
 
         topbar_layout = QHBoxLayout(topbar)
-        topbar_layout.setContentsMargins(32, 0, 32, 0)
-        topbar_layout.setSpacing(12)
+        topbar_layout.setContentsMargins(36, 0, 36, 0)
+        topbar_layout.setSpacing(16)
 
+        # Titulo izquierda
         self.lbl_usuario = QLabel("Dashboard")
         self.lbl_usuario.setStyleSheet(
-            "font-size: 18px; font-weight: 700; color: #ffffff;"
+            "font-size: 20px; font-weight: 800; color: #ffffff;"
+            "letter-spacing: -0.3px;"
         )
         topbar_layout.addWidget(self.lbl_usuario)
 
         topbar_layout.addStretch()
 
         # Centro: Registrar Tarea + Buscar
-        centro_layout = QHBoxLayout()
-        centro_layout.setSpacing(10)
+        centro = QHBoxLayout()
+        centro.setSpacing(12)
 
-        self.btn_registrar_tarea = QPushButton("Registrar Tarea")
-        self.btn_registrar_tarea.setProperty("cssClass", "toolbar")
-        self.btn_registrar_tarea.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_registrar_tarea.setFixedHeight(42)
-        centro_layout.addWidget(self.btn_registrar_tarea)
+        self.btn_registrar_tarea = BotonAnimado(
+            "Registrar Tarea",
+            color_sombra="#4f46e5",
+            intensidad_sombra=70,
+            blur_reposo=2.0,
+            blur_hover=16.0,
+        )
+        self.btn_registrar_tarea.setProperty("cssClass", "btn-registrar")
+        self.btn_registrar_tarea.setFixedHeight(44)
+        centro.addWidget(self.btn_registrar_tarea)
 
         self.txt_buscar = QLineEdit()
         self.txt_buscar.setProperty("cssClass", "search")
         self.txt_buscar.setPlaceholderText("Buscar tarea por nombre...")
-        self.txt_buscar.setFixedHeight(42)
-        self.txt_buscar.setMinimumWidth(260)
-        centro_layout.addWidget(self.txt_buscar)
+        self.txt_buscar.setFixedHeight(44)
+        self.txt_buscar.setMinimumWidth(280)
+        centro.addWidget(self.txt_buscar)
 
-        self.btn_buscar = QPushButton("Buscar")
-        self.btn_buscar.setProperty("cssClass", "toolbar")
-        self.btn_buscar.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_buscar.setFixedHeight(42)
-        centro_layout.addWidget(self.btn_buscar)
+        self.btn_buscar = BotonAnimado(
+            "Buscar",
+            color_sombra="#0891b2",
+            intensidad_sombra=70,
+            blur_reposo=2.0,
+            blur_hover=16.0,
+        )
+        self.btn_buscar.setProperty("cssClass", "btn-buscar")
+        self.btn_buscar.setFixedHeight(44)
+        centro.addWidget(self.btn_buscar)
 
-        topbar_layout.addLayout(centro_layout)
+        topbar_layout.addLayout(centro)
 
         topbar_layout.addStretch()
 
-        self.btn_cerrar_sesion = QPushButton("Cerrar Sesion")
-        self.btn_cerrar_sesion.setProperty("cssClass", "logout")
-        self.btn_cerrar_sesion.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_cerrar_sesion.setFixedHeight(42)
+        # Derecha: Cerrar Sesion
+        self.btn_cerrar_sesion = BotonAnimado(
+            "Cerrar Sesion",
+            color_sombra="#dc2626",
+            intensidad_sombra=70,
+            blur_reposo=2.0,
+            blur_hover=16.0,
+        )
+        self.btn_cerrar_sesion.setProperty("cssClass", "btn-logout")
+        self.btn_cerrar_sesion.setFixedHeight(44)
         topbar_layout.addWidget(self.btn_cerrar_sesion)
 
         layout_raiz.addWidget(topbar)
 
-        # ===== SCROLL AREA PARA CONTENIDO =====
+        # ============ SCROLL AREA ============
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setStyleSheet(
-            "QScrollArea { border: none; background: qlineargradient("
-            "x1:0, y1:0, x2:1, y2:1, stop:0 #dbeafe, stop:1 #ffffff); }"
-        )
+        scroll.setStyleSheet("QScrollArea { border: none; background: #e8ecf1; }")
 
         contenido_widget = QWidget()
-        contenido_widget.setStyleSheet(
-            "background: qlineargradient("
-            "x1:0, y1:0, x2:1, y2:1, stop:0 #dbeafe, stop:1 #ffffff);"
-        )
+        contenido_widget.setStyleSheet("background: #e8ecf1;")
         contenido_layout = QVBoxLayout(contenido_widget)
-        contenido_layout.setContentsMargins(40, 32, 40, 32)
+        contenido_layout.setContentsMargins(44, 36, 44, 36)
         contenido_layout.setSpacing(0)
 
+        # Titulo + Subtitulo
         self.lbl_titulo = QLabel("Dashboard")
         self.lbl_titulo.setProperty("cssClass", "titulo")
         contenido_layout.addWidget(self.lbl_titulo)
@@ -268,76 +335,94 @@ class PantallaDashboard(QWidget):
         self.lbl_subtitulo.setProperty("cssClass", "subtitulo")
         contenido_layout.addWidget(self.lbl_subtitulo)
 
-        contenido_layout.addSpacing(28)
+        contenido_layout.addSpacing(30)
 
-        # ===== ESTADISTICAS =====
+        # ============ ESTADISTICAS ============
         stats_layout = QHBoxLayout()
-        stats_layout.setSpacing(16)
+        stats_layout.setSpacing(18)
 
         self.stat_total = TarjetaEstadistica(
-            "Total de Tareas", 0, icono="\u2630", color_icono="#1d4ed8"
+            "Total de Tareas", 0, icono="\u2630", variante="blue"
         )
         stats_layout.addWidget(self.stat_total)
 
         self.stat_pendientes = TarjetaEstadistica(
-            "Pendientes", 0, icono="\u25cb", color_icono="#d97706"
+            "Pendientes", 0, icono="\u25cb", variante="amber"
         )
         stats_layout.addWidget(self.stat_pendientes)
 
         self.stat_completadas = TarjetaEstadistica(
-            "Completadas", 0, icono="\u2713", color_icono="#16a34a"
+            "Completadas", 0, icono="\u2713", variante="green"
         )
         stats_layout.addWidget(self.stat_completadas)
 
         stats_layout.addStretch()
         contenido_layout.addLayout(stats_layout)
 
-        contenido_layout.addSpacing(32)
+        contenido_layout.addSpacing(36)
 
-        # ===== SECCION TAREAS PENDIENTES =====
-        lbl_pendientes = QLabel("Tareas Pendientes")
-        lbl_pendientes.setProperty("cssClass", "section-title")
-        contenido_layout.addWidget(lbl_pendientes)
+        # ============ SECCION TAREAS PENDIENTES ============
+        self.frame_pendientes = QFrame()
+        self.frame_pendientes.setProperty("cssClass", "section-pendientes")
+        frame_pend_layout = QVBoxLayout(self.frame_pendientes)
+        frame_pend_layout.setContentsMargins(24, 22, 24, 24)
+        frame_pend_layout.setSpacing(0)
 
-        contenido_layout.addSpacing(14)
+        header_pend = QHBoxLayout()
+        lbl_pendientes = QLabel("\u25cb  Tareas Pendientes")
+        lbl_pendientes.setProperty("cssClass", "section-title-amber")
+        header_pend.addWidget(lbl_pendientes)
+        header_pend.addStretch()
+        frame_pend_layout.addLayout(header_pend)
+
+        frame_pend_layout.addSpacing(16)
 
         self.contenedor_pendientes = QVBoxLayout()
-        self.contenedor_pendientes.setSpacing(10)
-        contenido_layout.addLayout(self.contenedor_pendientes)
+        self.contenedor_pendientes.setSpacing(12)
+        frame_pend_layout.addLayout(self.contenedor_pendientes)
 
         self.lbl_placeholder_pendientes = QLabel("No hay tareas pendientes")
         self.lbl_placeholder_pendientes.setProperty("cssClass", "placeholder")
-        self.lbl_placeholder_pendientes.setAlignment(
-            Qt.AlignmentFlag.AlignCenter
-        )
-        contenido_layout.addWidget(self.lbl_placeholder_pendientes)
+        self.lbl_placeholder_pendientes.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        frame_pend_layout.addWidget(self.lbl_placeholder_pendientes)
 
-        contenido_layout.addSpacing(36)
+        contenido_layout.addWidget(self.frame_pendientes)
 
-        # ===== SECCION TAREAS COMPLETADAS =====
-        lbl_completadas = QLabel("Tareas Completadas")
-        lbl_completadas.setProperty("cssClass", "section-title")
-        contenido_layout.addWidget(lbl_completadas)
+        contenido_layout.addSpacing(28)
 
-        contenido_layout.addSpacing(14)
+        # ============ SECCION TAREAS COMPLETADAS ============
+        self.frame_completadas = QFrame()
+        self.frame_completadas.setProperty("cssClass", "section-completadas")
+        frame_comp_layout = QVBoxLayout(self.frame_completadas)
+        frame_comp_layout.setContentsMargins(24, 22, 24, 24)
+        frame_comp_layout.setSpacing(0)
+
+        header_comp = QHBoxLayout()
+        lbl_completadas = QLabel("\u2713  Tareas Completadas")
+        lbl_completadas.setProperty("cssClass", "section-title-green")
+        header_comp.addWidget(lbl_completadas)
+        header_comp.addStretch()
+        frame_comp_layout.addLayout(header_comp)
+
+        frame_comp_layout.addSpacing(16)
 
         self.contenedor_completadas = QVBoxLayout()
-        self.contenedor_completadas.setSpacing(10)
-        contenido_layout.addLayout(self.contenedor_completadas)
+        self.contenedor_completadas.setSpacing(12)
+        frame_comp_layout.addLayout(self.contenedor_completadas)
 
         self.lbl_placeholder_completadas = QLabel("No hay tareas completadas")
         self.lbl_placeholder_completadas.setProperty("cssClass", "placeholder")
-        self.lbl_placeholder_completadas.setAlignment(
-            Qt.AlignmentFlag.AlignCenter
-        )
-        contenido_layout.addWidget(self.lbl_placeholder_completadas)
+        self.lbl_placeholder_completadas.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        frame_comp_layout.addWidget(self.lbl_placeholder_completadas)
+
+        contenido_layout.addWidget(self.frame_completadas)
 
         contenido_layout.addStretch()
 
         scroll.setWidget(contenido_widget)
         layout_raiz.addWidget(scroll, 1)
 
-        # ===== CONEXIONES =====
+        # ============ CONEXIONES ============
         self.btn_registrar_tarea.clicked.connect(
             self.registrar_tarea_clicked.emit
         )
@@ -363,7 +448,7 @@ class PantallaDashboard(QWidget):
         self.stat_completadas.establecer_valor(completadas)
 
     def mostrar_tareas(self, tareas: list):
-        """Muestra las tareas como cards en las secciones correspondientes."""
+        """Muestra las tareas como cards animadas en las secciones."""
         self._limpiar_layout(self.contenedor_pendientes)
         self._limpiar_layout(self.contenedor_completadas)
 
@@ -396,7 +481,6 @@ class PantallaDashboard(QWidget):
             self.contenedor_completadas.addWidget(card)
 
     def _limpiar_layout(self, layout):
-        """Elimina todos los widgets de un layout."""
         while layout.count():
             item = layout.takeAt(0)
             widget = item.widget()
