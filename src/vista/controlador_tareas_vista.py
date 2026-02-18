@@ -1,205 +1,134 @@
 """
-Controlador de UI / mediador para la vista CRUD de tareas.
+Controlador de UI / mediador para la vista de tareas.
 Mantiene una lista mock en memoria y conecta senales de los widgets.
 NO usa SQLAlchemy ni accede a base de datos.
 """
 
 from datetime import datetime
-from PyQt6.QtWidgets import QTableWidgetItem, QMessageBox
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QMessageBox
 
 
 class ControladorTareasVista:
-    """Mediador entre los widgets de la vista CRUD de tareas."""
+    """Mediador entre las vistas del dashboard y registrar tarea."""
 
-    def __init__(self, vista_registrar_tarea):
-        """
-        Inicializa el controlador con referencia a la vista CRUD.
-
-        Args:
-            vista_registrar_tarea: Instancia de PantallaRegistrarTarea.
-        """
-        self.vista = vista_registrar_tarea
+    def __init__(self, vista_dashboard, vista_registrar_tarea):
+        self.dashboard = vista_dashboard
+        self.registrar = vista_registrar_tarea
         self._tareas_mock: list[dict] = []
         self._id_siguiente: int = 1
-        self._indice_seleccionado: int | None = None
 
         self._conectar_senales()
-        self._actualizar_tabla()
+        self._refrescar_dashboard()
 
     def _conectar_senales(self):
-        """Conecta las senales de los botones y la tabla."""
-        self.vista.btn_guardar.clicked.connect(self._guardar_tarea)
-        self.vista.btn_actualizar.clicked.connect(
-            self._actualizar_tarea_seleccionada
-        )
-        self.vista.btn_eliminar.clicked.connect(
-            self._eliminar_tarea_seleccionada
-        )
-        self.vista.btn_limpiar.clicked.connect(self._limpiar)
-        self.vista.tabla_tareas.itemSelectionChanged.connect(
-            self._al_seleccionar_fila
-        )
+        # Registrar tarea: guardar
+        self.registrar.guardar_clicked.connect(self._al_guardar)
 
-    def _guardar_tarea(self):
-        """Crea una nueva tarea con los datos del formulario."""
-        datos = self.vista.obtener_datos_formulario()
+        # Dashboard: completar, editar, eliminar
+        self.dashboard.completar_tarea_clicked.connect(self._completar_tarea)
+        self.dashboard.editar_tarea_clicked.connect(self._editar_tarea)
+        self.dashboard.eliminar_tarea_clicked.connect(self._eliminar_tarea)
 
-        if not datos["titulo"]:
+        # Dashboard: buscar
+        self.dashboard.buscar_clicked.connect(self._buscar_tareas)
+
+    def _al_guardar(self, datos: dict):
+        """Guardar nueva tarea o actualizar existente."""
+        if not datos.get("titulo"):
             QMessageBox.warning(
-                self.vista,
+                self.registrar,
                 "Campo requerido",
                 "El titulo de la tarea es obligatorio.",
             )
             return
 
-        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        tarea = {
-            "id_tarea": self._id_siguiente,
-            "titulo": datos["titulo"],
-            "descripcion": datos["descripcion"],
-            "completada": datos["completada"],
-            "creada_en": ahora,
-            "actualizada_en": ahora,
-        }
+        modo = datos.get("modo", "crear")
 
-        self._tareas_mock.append(tarea)
-        self._id_siguiente += 1
-        self._limpiar()
-        self._actualizar_tabla()
-
-    def _actualizar_tarea_seleccionada(self):
-        """Actualiza la tarea seleccionada con los datos del formulario."""
-        if self._indice_seleccionado is None:
-            QMessageBox.information(
-                self.vista,
-                "Seleccion requerida",
-                "Selecciona una tarea de la tabla para actualizar.",
-            )
-            return
-
-        datos = self.vista.obtener_datos_formulario()
-
-        if not datos["titulo"]:
-            QMessageBox.warning(
-                self.vista,
-                "Campo requerido",
-                "El titulo de la tarea es obligatorio.",
-            )
-            return
-
-        tarea = self._tareas_mock[self._indice_seleccionado]
-        tarea["titulo"] = datos["titulo"]
-        tarea["descripcion"] = datos["descripcion"]
-        tarea["completada"] = datos["completada"]
-        tarea["actualizada_en"] = datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
-
-        self._limpiar()
-        self._actualizar_tabla()
-
-    def _eliminar_tarea_seleccionada(self):
-        """Elimina la tarea seleccionada de la lista mock."""
-        if self._indice_seleccionado is None:
-            QMessageBox.information(
-                self.vista,
-                "Seleccion requerida",
-                "Selecciona una tarea de la tabla para eliminar.",
-            )
-            return
-
-        respuesta = QMessageBox.question(
-            self.vista,
-            "Confirmar eliminacion",
-            "Estas seguro de que deseas eliminar esta tarea?",
-            QMessageBox.StandardButton.Yes
-            | QMessageBox.StandardButton.No,
-        )
-
-        if respuesta == QMessageBox.StandardButton.Yes:
-            del self._tareas_mock[self._indice_seleccionado]
-            self._limpiar()
-            self._actualizar_tabla()
-
-    def _limpiar(self):
-        """Limpia el formulario y la seleccion."""
-        self._indice_seleccionado = None
-        self.vista.limpiar_formulario()
-
-    def _al_seleccionar_fila(self):
-        """Maneja la seleccion de una fila en la tabla."""
-        filas_seleccionadas = (
-            self.vista.tabla_tareas.selectionModel().selectedRows()
-        )
-
-        if not filas_seleccionadas:
-            self._indice_seleccionado = None
-            return
-
-        fila = filas_seleccionadas[0].row()
-        self._indice_seleccionado = fila
-        tarea = self._tareas_mock[fila]
-
-        self.vista.cargar_datos_formulario({
-            "titulo": tarea["titulo"],
-            "descripcion": tarea["descripcion"],
-            "completada": tarea["completada"],
-        })
-
-    def _actualizar_tabla(self):
-        """Reconstruye la tabla con los datos mock actuales."""
-        tabla = self.vista.tabla_tareas
-        tabla.setRowCount(0)
-
-        hay_tareas = len(self._tareas_mock) > 0
-        tabla.setVisible(hay_tareas)
-        self.vista.lbl_tabla_vacia.setVisible(not hay_tareas)
-
-        for fila, tarea in enumerate(self._tareas_mock):
-            tabla.insertRow(fila)
-
-            tabla.setItem(
-                fila, 0,
-                QTableWidgetItem(str(tarea["id_tarea"]))
-            )
-            tabla.setItem(
-                fila, 1,
-                QTableWidgetItem(tarea["titulo"])
-            )
-            tabla.setItem(
-                fila, 2,
-                QTableWidgetItem(tarea["descripcion"])
-            )
-            tabla.setItem(
-                fila, 3,
-                QTableWidgetItem(
-                    "Si" if tarea["completada"] else "No"
-                )
-            )
-            tabla.setItem(
-                fila, 4,
-                QTableWidgetItem(tarea["creada_en"])
-            )
-            tabla.setItem(
-                fila, 5,
-                QTableWidgetItem(tarea["actualizada_en"])
-            )
-
-            # Centrar ciertas columnas
-            for col in (0, 3):
-                item = tabla.item(fila, col)
-                if item:
-                    item.setTextAlignment(
-                        Qt.AlignmentFlag.AlignCenter
+        if modo == "editar" and datos.get("id_tarea") is not None:
+            for tarea in self._tareas_mock:
+                if tarea["id_tarea"] == datos["id_tarea"]:
+                    tarea["titulo"] = datos["titulo"]
+                    tarea["descripcion"] = datos["descripcion"]
+                    tarea["actualizada_en"] = datetime.now().strftime(
+                        "%Y-%m-%d %H:%M"
                     )
+                    break
+        else:
+            ahora = datetime.now().strftime("%Y-%m-%d %H:%M")
+            tarea = {
+                "id_tarea": self._id_siguiente,
+                "titulo": datos["titulo"],
+                "descripcion": datos["descripcion"],
+                "completada": False,
+                "creada_en": ahora,
+                "actualizada_en": ahora,
+            }
+            self._tareas_mock.append(tarea)
+            self._id_siguiente += 1
+
+        self.registrar.limpiar_formulario()
+        self._refrescar_dashboard()
+
+        # Volver al dashboard
+        self.registrar.volver_clicked.emit()
+
+    def _completar_tarea(self, id_tarea: int):
+        """Marca una tarea como completada."""
+        for tarea in self._tareas_mock:
+            if tarea["id_tarea"] == id_tarea:
+                tarea["completada"] = True
+                tarea["actualizada_en"] = datetime.now().strftime(
+                    "%Y-%m-%d %H:%M"
+                )
+                break
+        self._refrescar_dashboard()
+
+    def _editar_tarea(self, id_tarea: int):
+        """Carga una tarea en el formulario de edicion."""
+        for tarea in self._tareas_mock:
+            if tarea["id_tarea"] == id_tarea:
+                self.registrar.cargar_para_edicion(tarea)
+                stack = self.registrar.parent()
+                if stack:
+                    stack.setCurrentWidget(self.registrar)
+                break
+
+    def _eliminar_tarea(self, id_tarea: int):
+        """Elimina una tarea (desde Completadas)."""
+        self._tareas_mock = [
+            t for t in self._tareas_mock if t["id_tarea"] != id_tarea
+        ]
+        self._refrescar_dashboard()
+
+    def _buscar_tareas(self, texto: str):
+        """Filtra tareas por nombre y refresca el dashboard."""
+        if not texto:
+            self._refrescar_dashboard()
+            return
+
+        filtradas = [
+            t for t in self._tareas_mock
+            if texto.lower() in t["titulo"].lower()
+        ]
+        self._mostrar_tareas(filtradas)
+
+    def _refrescar_dashboard(self):
+        """Actualiza estadisticas y lista de tareas en el dashboard."""
+        stats = self.obtener_estadisticas()
+        self.dashboard.actualizar_estadisticas(
+            total=stats["total"],
+            pendientes=stats["pendientes"],
+            completadas=stats["completadas"],
+        )
+        self._mostrar_tareas(self._tareas_mock)
+
+    def _mostrar_tareas(self, tareas: list):
+        """Muestra las tareas en el dashboard."""
+        self.dashboard.mostrar_tareas(tareas)
 
     def obtener_estadisticas(self) -> dict:
-        """Retorna estadisticas de las tareas mock."""
         total = len(self._tareas_mock)
-        completadas = sum(
-            1 for t in self._tareas_mock if t["completada"]
-        )
+        completadas = sum(1 for t in self._tareas_mock if t["completada"])
         pendientes = total - completadas
         return {
             "total": total,

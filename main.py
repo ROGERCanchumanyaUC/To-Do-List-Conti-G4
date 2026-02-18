@@ -4,11 +4,11 @@ Crea la aplicacion PyQt6, carga estilos QSS y muestra la ventana principal.
 """
 
 import sys
-import os
 from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont
 
 from src.vista.ventana_principal import VentanaPrincipal
 
@@ -33,10 +33,15 @@ def main():
     app.setApplicationName("Todo App")
     app.setApplicationDisplayName("Todo App - Gestor de Tareas")
 
+    # Fuente base de la aplicacion
+    fuente = QFont("Segoe UI", 10)
+    fuente.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
+    app.setFont(fuente)
+
     # Cargar estilos QSS
     cargar_estilos(app)
 
-    # Crear y mostrar la ventana principal a pantalla completa
+    # Crear y mostrar la ventana principal
     ventana = VentanaPrincipal()
     ventana.showMaximized()
 
