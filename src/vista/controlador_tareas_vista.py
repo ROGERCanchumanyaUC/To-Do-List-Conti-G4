@@ -111,15 +111,7 @@ class ControladorTareasVista:
             True,
         )
         self._refrescar_dashboard()
-
-    def _eliminar_tarea(self, id_tarea: int):
-        """Elimina tarea (desde completadas)."""
-        if self._id_usuario is None:
-            return
-
-        self._task_manager.eliminar_tarea(self._id_usuario, int(id_tarea))
-        self._refrescar_dashboard()
-
+        
     def _editar_tarea(self, id_tarea: int):
         """Carga una tarea en el formulario de edición."""
         if self._id_usuario is None:
@@ -177,6 +169,40 @@ class ControladorTareasVista:
 
         tareas = self._task_manager.listar_tareas(self._id_usuario)
         return [self._tarea_a_dict(t) for t in tareas]
+    
+    def _eliminar_tarea(self, id_tarea: int):
+        """Elimina tarea (desde completadas) con confirmación."""
+        if self._id_usuario is None:
+            return
+
+        # (Opcional) Obtener título para mostrar en el mensaje
+        titulo = ""
+        tareas = self._obtener_tareas_dict()
+        for t in tareas:
+            if t["id_tarea"] == int(id_tarea):
+                titulo = t.get("titulo", "")
+                break
+
+        texto = (
+            f"¿Seguro que deseas eliminar la tarea:\n\n“{titulo}”?\n\n"
+            "Esta acción no se puede deshacer."
+            if titulo
+            else "¿Seguro que deseas eliminar esta tarea?\n\nEsta acción no se puede deshacer."
+        )
+
+        respuesta = QMessageBox.question(
+            self.dashboard,                 # o self.registrar, cualquiera como parent
+            "Confirmar eliminación",
+            texto,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,  # por defecto NO
+        )
+
+        if respuesta != QMessageBox.StandardButton.Yes:
+            return  # Cancelado por el usuario
+
+        self._task_manager.eliminar_tarea(self._id_usuario, int(id_tarea))
+        self._refrescar_dashboard()
 
     @staticmethod
     def _tarea_a_dict(tarea) -> dict:
