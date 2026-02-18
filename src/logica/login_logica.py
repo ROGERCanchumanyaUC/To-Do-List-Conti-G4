@@ -9,31 +9,32 @@ class LoginLogica:
 
     @staticmethod
     def generar_hash(password: str) -> str:
-        """
-        Genera hash SHA256 de la contraseña.
-        """
+        """Genera hash SHA256 de la contraseña."""
         return hashlib.sha256(password.encode()).hexdigest()
 
     def login(self, username: str, password: str) -> bool:
-        """
-        Valida usuario y contraseña contra la base de datos.
-        """
-
+        """Valida usuario y contraseña contra la base de datos."""
         session = SessionLocal()
 
         try:
-            usuario = (
-                session.query(Usuario)
-                .filter_by(username=username)
-                .first()
-            )
+            usuario = session.query(Usuario).filter_by(username=username).first()
 
             if usuario is None:
                 return False
 
             password_hash = self.generar_hash(password)
-
             return usuario.password_hash == password_hash
 
+        finally:
+            session.close()
+
+    def obtener_id_usuario(self, username: str) -> int | None:
+        """Devuelve id_usuario del username, o None si no existe."""
+        session = SessionLocal()
+        try:
+            usuario = session.query(Usuario).filter_by(username=username).first()
+            if usuario is None:
+                return None
+            return int(usuario.id_usuario)
         finally:
             session.close()

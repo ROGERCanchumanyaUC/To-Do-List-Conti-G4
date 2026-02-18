@@ -3,18 +3,24 @@ Pantalla de inicio de sesion - diseño profesional con card centrado.
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QLineEdit, QPushButton, QFrame, QSizePolicy,
-    QGraphicsDropShadowEffect
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QFrame,
+    QSizePolicy,
+    QGraphicsDropShadowEffect,
 )
 from PyQt6.QtCore import pyqtSignal, Qt
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtGui import QColor
 
 
 class PantallaLogin(QWidget):
     """Pantalla de login a pantalla completa con card centrado."""
 
-    sesion_iniciada = pyqtSignal(str)
+    sesion_iniciada = pyqtSignal(str, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -34,7 +40,6 @@ class PantallaLogin(QWidget):
 
         layout_horizontal.addStretch(1)
 
-        # -- Card de login --
         self.card = QFrame()
         self.card.setProperty("cssClass", "login-card")
         self.card.setFixedWidth(420)
@@ -43,7 +48,6 @@ class PantallaLogin(QWidget):
             QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred
         )
 
-        # Sombra elegante
         sombra = QGraphicsDropShadowEffect(self.card)
         sombra.setBlurRadius(40)
         sombra.setOffset(0, 8)
@@ -54,7 +58,6 @@ class PantallaLogin(QWidget):
         card_layout.setContentsMargins(44, 48, 44, 44)
         card_layout.setSpacing(0)
 
-        # -- Icono circular --
         icono_container = QHBoxLayout()
         icono_container.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -68,13 +71,12 @@ class PantallaLogin(QWidget):
             "font-size: 22px;"
             "font-weight: 700;"
         )
-        lbl_icono.setText("\u2713")  # checkmark icon
+        lbl_icono.setText("\u2713")
         icono_container.addWidget(lbl_icono)
         card_layout.addLayout(icono_container)
 
         card_layout.addSpacing(20)
 
-        # Titulo
         lbl_titulo = QLabel("Bienvenido de vuelta")
         lbl_titulo.setProperty("cssClass", "titulo")
         lbl_titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -82,7 +84,6 @@ class PantallaLogin(QWidget):
 
         card_layout.addSpacing(6)
 
-        # Subtitulo
         lbl_subtitulo = QLabel("Ingresa tus credenciales para continuar")
         lbl_subtitulo.setProperty("cssClass", "subtitulo")
         lbl_subtitulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -90,7 +91,6 @@ class PantallaLogin(QWidget):
 
         card_layout.addSpacing(32)
 
-        # Campo: Usuario
         lbl_usuario = QLabel("Usuario")
         lbl_usuario.setProperty("cssClass", "campo-label")
         card_layout.addWidget(lbl_usuario)
@@ -104,7 +104,6 @@ class PantallaLogin(QWidget):
 
         card_layout.addSpacing(18)
 
-        # Campo: Contrasena
         lbl_contrasena = QLabel("Contrasena")
         lbl_contrasena.setProperty("cssClass", "campo-label")
         card_layout.addWidget(lbl_contrasena)
@@ -119,7 +118,6 @@ class PantallaLogin(QWidget):
 
         card_layout.addSpacing(10)
 
-        # Label de error
         self.lbl_error = QLabel("")
         self.lbl_error.setProperty("cssClass", "error")
         self.lbl_error.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -129,7 +127,6 @@ class PantallaLogin(QWidget):
 
         card_layout.addSpacing(12)
 
-        # Boton
         self.btn_iniciar_sesion = QPushButton("Iniciar Sesion")
         self.btn_iniciar_sesion.setMinimumHeight(46)
         self.btn_iniciar_sesion.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -140,18 +137,29 @@ class PantallaLogin(QWidget):
         layout_horizontal.addWidget(self.card)
         layout_horizontal.addStretch(1)
 
-        # Conexiones
         self.btn_iniciar_sesion.clicked.connect(self._al_iniciar_sesion)
         self.txt_contrasena.returnPressed.connect(self._al_iniciar_sesion)
         self.txt_usuario.returnPressed.connect(
             lambda: self.txt_contrasena.setFocus()
         )
 
+        self.txt_usuario.textChanged.connect(self._ocultar_error)
+        self.txt_contrasena.textChanged.connect(self._ocultar_error)
+
+    def _ocultar_error(self):
+        if self.lbl_error.isVisible():
+            self.lbl_error.setVisible(False)
+            self.lbl_error.setText("")
+
     def _al_iniciar_sesion(self):
-        usuario = self.txt_usuario.text().strip()
-        if not usuario:
-            usuario = "Usuario"
-        self.sesion_iniciada.emit(usuario)
+        username = self.txt_usuario.text().strip()
+        password = self.txt_contrasena.text().strip()
+
+        if not username or not password:
+            self.mostrar_error("Usuario y contrasena son obligatorios.")
+            return
+
+        self.sesion_iniciada.emit(username, password)
 
     def mostrar_error(self, mensaje: str):
         self.lbl_error.setText(mensaje)

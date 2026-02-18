@@ -7,17 +7,15 @@ import sys
 from pathlib import Path
 
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
+from src.modelo.conexion import init_db
 from src.vista.ventana_principal import VentanaPrincipal
 
 
 def cargar_estilos(app: QApplication) -> None:
     """Carga la hoja de estilos QSS desde el archivo."""
-    ruta_estilos = (
-        Path(__file__).parent / "src" / "vista" / "estilos.qss"
-    )
+    ruta_estilos = Path(__file__).parent / "src" / "vista" / "estilos.qss"
 
     if ruta_estilos.exists():
         with open(ruta_estilos, "r", encoding="utf-8") as archivo:
@@ -29,19 +27,18 @@ def cargar_estilos(app: QApplication) -> None:
 
 def main():
     """Funcion principal que inicia la aplicacion."""
+    init_db()
+
     app = QApplication(sys.argv)
     app.setApplicationName("Todo App")
     app.setApplicationDisplayName("Todo App - Gestor de Tareas")
 
-    # Fuente base de la aplicacion
     fuente = QFont("Segoe UI", 10)
     fuente.setStyleStrategy(QFont.StyleStrategy.PreferAntialias)
     app.setFont(fuente)
 
-    # Cargar estilos QSS
     cargar_estilos(app)
 
-    # Crear y mostrar la ventana principal
     ventana = VentanaPrincipal()
     ventana.showMaximized()
 
