@@ -134,7 +134,7 @@ class PantallaLogin(QWidget):
 
         card_layout.addSpacing(14)
 
-        # Boton animado - Iniciar Sesion (navy oscuro con sombra indigo)
+        # Boton Iniciar Sesion
         self.btn_iniciar_sesion = BotonAnimado(
             "Iniciar Sesion",
             color_sombra="#4f46e5",

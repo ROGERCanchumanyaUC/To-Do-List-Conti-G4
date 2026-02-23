@@ -1,3 +1,4 @@
+# src/vista/controladores.py
 """
 Controlador de UI / mediador para la vista de tareas.
 Conecta señales de widgets con la capa lógica (TaskManager).
@@ -111,7 +112,7 @@ class ControladorTareasVista:
             True,
         )
         self._refrescar_dashboard()
-        
+
     def _editar_tarea(self, id_tarea: int):
         """Carga una tarea en el formulario de edición."""
         if self._id_usuario is None:
@@ -169,13 +170,12 @@ class ControladorTareasVista:
 
         tareas = self._task_manager.listar_tareas(self._id_usuario)
         return [self._tarea_a_dict(t) for t in tareas]
-    
+
     def _eliminar_tarea(self, id_tarea: int):
-        """Elimina tarea (desde completadas) con confirmación."""
+        """Elimina tarea con confirmación."""
         if self._id_usuario is None:
             return
 
-        # (Opcional) Obtener título para mostrar en el mensaje
         titulo = ""
         tareas = self._obtener_tareas_dict()
         for t in tareas:
@@ -191,15 +191,15 @@ class ControladorTareasVista:
         )
 
         respuesta = QMessageBox.question(
-            self.dashboard,                 # o self.registrar, cualquiera como parent
+            self.dashboard,
             "Confirmar eliminación",
             texto,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,  # por defecto NO
+            QMessageBox.StandardButton.No,
         )
 
         if respuesta != QMessageBox.StandardButton.Yes:
-            return  # Cancelado por el usuario
+            return
 
         self._task_manager.eliminar_tarea(self._id_usuario, int(id_tarea))
         self._refrescar_dashboard()

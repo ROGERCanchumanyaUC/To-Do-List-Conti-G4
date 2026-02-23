@@ -10,7 +10,7 @@ from src.logica.task_manager import TaskManager
 from src.vista.pantalla_login import PantallaLogin
 from src.vista.pantalla_dashboard import PantallaDashboard
 from src.vista.pantalla_registrar_tarea import PantallaRegistrarTarea
-from src.vista.controlador_tareas_vista import ControladorTareasVista
+from src.vista.controladores import ControladorTareasVista
 
 
 class VentanaPrincipal(QMainWindow):
