@@ -1,5 +1,6 @@
 # src/logica/task_manager.py
 from __future__ import annotations
+from datetime import datetime
 
 from src.modelo.repositorio_tareas import RepositorioTareasSQLite
 
@@ -58,4 +59,25 @@ class TaskManager:
         """
         tareas = self.listar_tareas(id_usuario)
         return [t for t in tareas if bool(getattr(t, "completada", False)) == bool(completada)]
-    
+    def listar_tareas_ordenadas(self, id_usuario: int, orden: str = "fecha"):
+        """
+        HU10: Lista tareas del usuario ordenadas.
+        orden:
+        - "fecha"  -> más recientes primero
+        - "nombre" -> alfabético por título
+        """
+        tareas = self.listar_tareas(id_usuario)
+        orden = (orden or "fecha").strip().lower()
+
+        if orden == "nombre":
+            return sorted(
+                tareas,
+                key=lambda t: (getattr(t, "titulo", "") or "").lower(),
+            )
+
+        # Por fecha (más reciente primero)
+        def key_fecha(t):
+            v = getattr(t, "creada_en", None)
+            return v if v is not None else datetime.min
+
+        return sorted(tareas, key=key_fecha, reverse=True)

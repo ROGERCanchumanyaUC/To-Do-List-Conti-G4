@@ -3,6 +3,7 @@
 Controlador de UI / mediador para la vista de tareas.
 Conecta señales de widgets con la capa lógica (TaskManager).
 Incluye HU08: Filtrar tareas por estado (total/pendientes/completadas).
+Incluye HU10: Ordenar tareas (por fecha o por nombre).
 """
 
 from __future__ import annotations
@@ -31,13 +32,17 @@ class ControladorTareasVista:
         # HU08: filtro por estado (None = todas)
         self._filtro_estado: str | None = None  # "pendientes" | "completadas" | None
 
+        # HU10: orden actual
+        self._orden: str = "fecha"  # "fecha" | "nombre"
+
         self._conectar_senales()
         self._refrescar_dashboard()
 
     def set_usuario(self, id_usuario: int | None) -> None:
         """Setea el usuario actual (para filtrar tareas por usuario)."""
         self._id_usuario = id_usuario
-        self._filtro_estado = None  # reset filtro al cambiar usuario / cerrar sesión
+        self._filtro_estado = None
+        self._orden = "fecha"
         self._refrescar_dashboard()
 
     def _conectar_senales(self):
@@ -49,13 +54,17 @@ class ControladorTareasVista:
 
         self.dashboard.buscar_clicked.connect(self._buscar_tareas)
 
-        # HU08: señales de filtro por estado (deben existir en PantallaDashboard)
+        # HU08
         if hasattr(self.dashboard, "filtro_total_clicked"):
             self.dashboard.filtro_total_clicked.connect(self._ver_todas)
         if hasattr(self.dashboard, "filtro_pendientes_clicked"):
             self.dashboard.filtro_pendientes_clicked.connect(self._ver_pendientes)
         if hasattr(self.dashboard, "filtro_completadas_clicked"):
             self.dashboard.filtro_completadas_clicked.connect(self._ver_completadas)
+
+        # HU10 (solo si existe en PantallaDashboard)
+        if hasattr(self.dashboard, "ordenar_changed"):
+            self.dashboard.ordenar_changed.connect(self._cambiar_orden)
 
     # ---------------- HU08: Acciones de filtro ----------------
 
@@ -70,6 +79,30 @@ class ControladorTareasVista:
     def _ver_completadas(self):
         self._filtro_estado = "completadas"
         self._refrescar_dashboard()
+
+    # ---------------- HU10: Orden ----------------
+
+    def _cambiar_orden(self, modo: str):
+        modo = (modo or "fecha").strip().lower()
+        if modo not in ("fecha", "nombre"):
+            modo = "fecha"
+        self._orden = modo
+        self._refrescar_dashboard()
+
+    def _ordenar_tareas(self, tareas):
+        """Ordena una lista de tareas ORM según HU10."""
+        if self._orden == "nombre":
+            return sorted(
+                tareas,
+                key=lambda t: (getattr(t, "titulo", "") or "").lower(),
+            )
+
+        # fecha (más reciente primero)
+        def key_fecha(t):
+            v = getattr(t, "creada_en", None)
+            return v if v is not None else datetime.min
+
+        return sorted(tareas, key=key_fecha, reverse=True)
 
     # ---------------- CRUD tareas ----------------
 
@@ -168,6 +201,7 @@ class ControladorTareasVista:
 
         tareas = self._listar_tareas_all()
         tareas = self._aplicar_filtro_estado(tareas)
+        tareas = self._ordenar_tareas(tareas)  # HU10
 
         if not texto:
             self._mostrar_tareas([self._tarea_a_dict(t) for t in tareas])
@@ -203,8 +237,8 @@ class ControladorTareasVista:
             completadas=completadas,
         )
 
-        # HU08: lo que se muestra depende del filtro
         tareas_visibles = self._aplicar_filtro_estado(tareas_all)
+        tareas_visibles = self._ordenar_tareas(tareas_visibles)  # HU10
         self._mostrar_tareas([self._tarea_a_dict(t) for t in tareas_visibles])
 
     def _listar_tareas_all(self):
@@ -281,4 +315,3 @@ class ControladorTareasVista:
         if isinstance(valor, datetime):
             return valor.strftime("%Y-%m-%d %H:%M")
         return str(valor)
-    

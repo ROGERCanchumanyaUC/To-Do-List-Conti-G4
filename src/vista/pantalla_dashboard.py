@@ -4,9 +4,13 @@ Top bar con Cerrar Sesion a la derecha, Registrar Tarea + Buscar centrados.
 Secciones con fondos coloreados y tarjetas animadas.
 
 HU08 (UI): Filtrar por estado desde las tarjetas de estadística:
-- Click en TOTAL -> muestra ambas secciones
-- Click en PENDIENTES -> muestra solo sección Pendientes
-- Click en COMPLETADAS -> muestra solo sección Completadas
+- Click en TOTAL -> muestra ambas columnas (Pendientes izq, Completadas der)
+- Click en PENDIENTES -> muestra solo Pendientes (en columna izquierda), mantiene ancho 2 columnas
+- Click en COMPLETADAS -> muestra solo Completadas (en columna izquierda), mantiene ancho 2 columnas
+
+HU10 (UI): Ordenar tareas:
+- Botón Ordenar ▾ (a la derecha de Buscar) -> Por fecha / Por nombre
+- Emite ordenar_changed("fecha"|"nombre")
 """
 
 from PyQt6.QtWidgets import (
@@ -17,8 +21,10 @@ from PyQt6.QtWidgets import (
     QFrame,
     QLineEdit,
     QScrollArea,
+    QMenu,
 )
 from PyQt6.QtCore import pyqtSignal, Qt
+from PyQt6.QtGui import QAction, QActionGroup
 
 from src.vista.animaciones import BotonAnimado, TarjetaAnimada
 
@@ -251,44 +257,62 @@ class PantallaDashboard(QWidget):
     editar_tarea_clicked = pyqtSignal(int)
     eliminar_tarea_clicked = pyqtSignal(int)
 
-    # HU08: señales de filtro por estado desde tarjetas de estadística
+    # HU08
     filtro_total_clicked = pyqtSignal()
     filtro_pendientes_clicked = pyqtSignal()
     filtro_completadas_clicked = pyqtSignal()
 
+    # HU10
+    ordenar_changed = pyqtSignal(str)  # "fecha" | "nombre"
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._usuario = ""
-        self._modo_filtro = "total"  # "total" | "pendientes" | "completadas"
+        self._modo_filtro = "total"
+        self._modo_orden = "fecha"
         self._configurar_ui()
 
-    # -------------------- HU08 UI: mostrar/ocultar secciones --------------------
+    # -------------------- HU08: mover cuadros para que "solo uno" aparezca a la izquierda --------------------
+
+    def _mover_a_layout(self, widget: QWidget, layout: QVBoxLayout) -> None:
+        """Mueve widget al layout objetivo (solo si no está ya ahí)."""
+        if widget.parent() is layout.parentWidget():
+            return
+        # Quita de su layout anterior si aplica
+        if widget.parent() is not None and widget.parent() is not self:
+            # remover del layout anterior sin destruir
+            old_parent = widget.parent()
+            old_layout = old_parent.layout()
+            if old_layout is not None:
+                old_layout.removeWidget(widget)
+        layout.addWidget(widget)
 
     def aplicar_modo_filtro(self, modo: str) -> None:
-        """
-        Controla VISIBILIDAD de recuadros (secciones) según filtro.
-        - total: muestra pendientes y completadas
-        - pendientes: muestra solo pendientes
-        - completadas: muestra solo completadas
-        """
         modo = (modo or "total").strip().lower()
         if modo not in ("total", "pendientes", "completadas"):
             modo = "total"
-
         self._modo_filtro = modo
 
         if modo == "total":
+            # Pendientes a la izquierda, Completadas a la derecha
+            self._mover_a_layout(self.frame_pendientes, self._lay_col_izq)
+            self._mover_a_layout(self.frame_completadas, self._lay_col_der)
             self.frame_pendientes.setVisible(True)
             self.frame_completadas.setVisible(True)
-            self.spacer_entre_frames.setVisible(True)
+
         elif modo == "pendientes":
+            # Pendientes a la izquierda visible, Completadas a la derecha oculto
+            self._mover_a_layout(self.frame_pendientes, self._lay_col_izq)
+            self._mover_a_layout(self.frame_completadas, self._lay_col_der)
             self.frame_pendientes.setVisible(True)
             self.frame_completadas.setVisible(False)
-            self.spacer_entre_frames.setVisible(False)
-        else:  # "completadas"
-            self.frame_pendientes.setVisible(False)
+
+        else:  # completadas
+            # ✅ Completadas debe mostrarse en la izquierda
+            self._mover_a_layout(self.frame_completadas, self._lay_col_izq)
+            self._mover_a_layout(self.frame_pendientes, self._lay_col_der)
             self.frame_completadas.setVisible(True)
-            self.spacer_entre_frames.setVisible(False)
+            self.frame_pendientes.setVisible(False)
 
     def _click_total(self) -> None:
         self.aplicar_modo_filtro("total")
@@ -302,7 +326,65 @@ class PantallaDashboard(QWidget):
         self.aplicar_modo_filtro("completadas")
         self.filtro_completadas_clicked.emit()
 
-    # --------------------------------------------------------------------------
+    # -------------------- HU10: Ordenar (menu) --------------------
+
+    def _crear_menu_ordenar(self) -> None:
+        self._menu_ordenar = QMenu(self)
+
+        self._menu_ordenar.setStyleSheet("""
+            QMenu {
+                background-color: #ffffff;
+                color: #111827;
+                border: 1px solid #d1d5db;
+                padding: 6px;
+            }
+            QMenu::item {
+                padding: 8px 14px;
+                border-radius: 8px;
+            }
+            QMenu::item:selected {
+                background-color: #e5e7eb;
+            }
+            QMenu::item:checked {
+                font-weight: 700;
+            }
+        """)
+
+        grupo = QActionGroup(self._menu_ordenar)
+        grupo.setExclusive(True)
+
+        self._act_orden_fecha = QAction("Por fecha", self._menu_ordenar)
+        self._act_orden_fecha.setCheckable(True)
+        self._act_orden_fecha.setChecked(True)
+
+        self._act_orden_nombre = QAction("Por nombre", self._menu_ordenar)
+        self._act_orden_nombre.setCheckable(True)
+
+        grupo.addAction(self._act_orden_fecha)
+        grupo.addAction(self._act_orden_nombre)
+
+        self._menu_ordenar.addAction(self._act_orden_fecha)
+        self._menu_ordenar.addAction(self._act_orden_nombre)
+
+        self._act_orden_fecha.triggered.connect(lambda: self._set_orden("fecha"))
+        self._act_orden_nombre.triggered.connect(lambda: self._set_orden("nombre"))
+
+    def _mostrar_menu_ordenar(self) -> None:
+        pos = self.btn_ordenar.mapToGlobal(self.btn_ordenar.rect().bottomLeft())
+        self._menu_ordenar.exec(pos)
+
+    def _set_orden(self, modo: str) -> None:
+        modo = (modo or "fecha").strip().lower()
+        if modo not in ("fecha", "nombre"):
+            modo = "fecha"
+
+        if self._modo_orden == modo:
+            return
+
+        self._modo_orden = modo
+        self.ordenar_changed.emit(modo)
+
+    # ------------------------------------------------------------------
 
     def _configurar_ui(self):
         layout_raiz = QVBoxLayout(self)
@@ -318,7 +400,6 @@ class PantallaDashboard(QWidget):
         topbar_layout.setContentsMargins(36, 0, 36, 0)
         topbar_layout.setSpacing(16)
 
-        # Titulo izquierda
         self.lbl_usuario = QLabel("Dashboard")
         self.lbl_usuario.setStyleSheet(
             "font-size: 20px; font-weight: 800; color: #ffffff;"
@@ -328,7 +409,7 @@ class PantallaDashboard(QWidget):
 
         topbar_layout.addStretch()
 
-        # Centro: Registrar Tarea + Buscar
+        # Centro: Registrar + Buscar + Ordenar ▾
         centro = QHBoxLayout()
         centro.setSpacing(12)
 
@@ -347,7 +428,7 @@ class PantallaDashboard(QWidget):
         self.txt_buscar.setProperty("cssClass", "search")
         self.txt_buscar.setPlaceholderText("Buscar tarea por nombre...")
         self.txt_buscar.setFixedHeight(44)
-        self.txt_buscar.setMinimumWidth(280)
+        self.txt_buscar.setMinimumWidth(260)
         centro.addWidget(self.txt_buscar)
 
         self.btn_buscar = BotonAnimado(
@@ -361,11 +442,20 @@ class PantallaDashboard(QWidget):
         self.btn_buscar.setFixedHeight(44)
         centro.addWidget(self.btn_buscar)
 
-        topbar_layout.addLayout(centro)
+        self.btn_ordenar = BotonAnimado(
+            "Ordenar ▾",
+            color_sombra="#111827",
+            intensidad_sombra=55,
+            blur_reposo=2.0,
+            blur_hover=16.0,
+        )
+        self.btn_ordenar.setProperty("cssClass", "btn-ordenar")
+        self.btn_ordenar.setFixedHeight(44)
+        centro.addWidget(self.btn_ordenar)
 
+        topbar_layout.addLayout(centro)
         topbar_layout.addStretch()
 
-        # Derecha: Cerrar Sesion
         self.btn_cerrar_sesion = BotonAnimado(
             "Cerrar Sesion",
             color_sombra="#dc2626",
@@ -391,7 +481,6 @@ class PantallaDashboard(QWidget):
         contenido_layout.setContentsMargins(44, 36, 44, 36)
         contenido_layout.setSpacing(0)
 
-        # Titulo + Subtitulo
         self.lbl_titulo = QLabel("Dashboard")
         self.lbl_titulo.setProperty("cssClass", "titulo")
         contenido_layout.addWidget(self.lbl_titulo)
@@ -426,9 +515,25 @@ class PantallaDashboard(QWidget):
         stats_layout.addStretch()
         contenido_layout.addLayout(stats_layout)
 
-        contenido_layout.addSpacing(36)
+        contenido_layout.addSpacing(28)
 
-        # ============ SECCION TAREAS PENDIENTES ============
+        # ============ COLUMNAS (2 columnas siempre) ============
+        columnas = QHBoxLayout()
+        columnas.setSpacing(18)
+
+        # Columna izquierda (contenedor)
+        self.col_izq = QWidget()
+        self._lay_col_izq = QVBoxLayout(self.col_izq)
+        self._lay_col_izq.setContentsMargins(0, 0, 0, 0)
+        self._lay_col_izq.setSpacing(0)
+
+        # Columna derecha (contenedor)
+        self.col_der = QWidget()
+        self._lay_col_der = QVBoxLayout(self.col_der)
+        self._lay_col_der.setContentsMargins(0, 0, 0, 0)
+        self._lay_col_der.setSpacing(0)
+
+        # --- Frame Pendientes ---
         self.frame_pendientes = QFrame()
         self.frame_pendientes.setProperty("cssClass", "section-pendientes")
         frame_pend_layout = QVBoxLayout(self.frame_pendientes)
@@ -453,15 +558,7 @@ class PantallaDashboard(QWidget):
         self.lbl_placeholder_pendientes.setAlignment(Qt.AlignmentFlag.AlignCenter)
         frame_pend_layout.addWidget(self.lbl_placeholder_pendientes)
 
-        contenido_layout.addWidget(self.frame_pendientes)
-
-        # (HU08) spacer controlable (en vez de addSpacing fijo)
-        self.spacer_entre_frames = QFrame()
-        self.spacer_entre_frames.setFixedHeight(28)
-        self.spacer_entre_frames.setStyleSheet("background: transparent; border: none;")
-        contenido_layout.addWidget(self.spacer_entre_frames)
-
-        # ============ SECCION TAREAS COMPLETADAS ============
+        # --- Frame Completadas ---
         self.frame_completadas = QFrame()
         self.frame_completadas.setProperty("cssClass", "section-completadas")
         frame_comp_layout = QVBoxLayout(self.frame_completadas)
@@ -486,8 +583,16 @@ class PantallaDashboard(QWidget):
         self.lbl_placeholder_completadas.setAlignment(Qt.AlignmentFlag.AlignCenter)
         frame_comp_layout.addWidget(self.lbl_placeholder_completadas)
 
-        contenido_layout.addWidget(self.frame_completadas)
+        # Estado inicial: Pendientes izq / Completadas der
+        self._lay_col_izq.addWidget(self.frame_pendientes)
+        self._lay_col_der.addWidget(self.frame_completadas)
 
+        columnas.addWidget(self.col_izq, 1)
+        columnas.addWidget(self.col_der, 1)
+        columnas.setAlignment(self.col_izq, Qt.AlignmentFlag.AlignTop)
+        columnas.setAlignment(self.col_der, Qt.AlignmentFlag.AlignTop)
+
+        contenido_layout.addLayout(columnas)
         contenido_layout.addStretch()
 
         scroll.setWidget(contenido_widget)
@@ -499,12 +604,16 @@ class PantallaDashboard(QWidget):
         self.btn_buscar.clicked.connect(self._al_buscar)
         self.txt_buscar.returnPressed.connect(self._al_buscar)
 
-        # HU08: clicks en tarjetas de estadística (primero aplica UI, luego emite señal)
+        # HU08
         self.stat_total.clicked.connect(self._click_total)
         self.stat_pendientes.clicked.connect(self._click_pendientes)
         self.stat_completadas.clicked.connect(self._click_completadas)
 
-        # Estado inicial: mostrar todo
+        # HU10
+        self._crear_menu_ordenar()
+        self.btn_ordenar.clicked.connect(self._mostrar_menu_ordenar)
+
+        # Estado inicial
         self.aplicar_modo_filtro("total")
 
     def _al_buscar(self):
@@ -516,7 +625,6 @@ class PantallaDashboard(QWidget):
         self.lbl_subtitulo.setText(
             f"Bienvenido, {usuario}. Aqui tienes un resumen de tus tareas."
         )
-        # al iniciar sesión, volvemos a vista total
         self.aplicar_modo_filtro("total")
 
     def actualizar_estadisticas(self, total: int, pendientes: int, completadas: int):
