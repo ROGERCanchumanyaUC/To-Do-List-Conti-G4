@@ -2,6 +2,11 @@
 Pantalla del dashboard principal.
 Top bar con Cerrar Sesion a la derecha, Registrar Tarea + Buscar centrados.
 Secciones con fondos coloreados y tarjetas animadas.
+
+HU08 (UI): Filtrar por estado desde las tarjetas de estadística:
+- Click en TOTAL -> muestra ambas secciones
+- Click en PENDIENTES -> muestra solo sección Pendientes
+- Click en COMPLETADAS -> muestra solo sección Completadas
 """
 
 from PyQt6.QtWidgets import (
@@ -19,11 +24,13 @@ from src.vista.animaciones import BotonAnimado, TarjetaAnimada
 
 
 # ------------------------------------------------------------------ #
-#  TARJETA DE ESTADISTICA (con color propio)
+#  TARJETA DE ESTADISTICA (clicable + color propio)
 # ------------------------------------------------------------------ #
 
 class TarjetaEstadistica(TarjetaAnimada):
-    """Card para mostrar una estadistica con icono y color propio."""
+    """Card para mostrar una estadistica con icono y color propio (clicable)."""
+
+    clicked = pyqtSignal()
 
     def __init__(
         self,
@@ -33,7 +40,6 @@ class TarjetaEstadistica(TarjetaAnimada):
         variante: str = "blue",
         parent=None,
     ):
-        # Sombra tintada segun variante
         colores_sombra = {
             "blue": "#2563eb",
             "amber": "#d97706",
@@ -79,6 +85,19 @@ class TarjetaEstadistica(TarjetaAnimada):
 
     def establecer_valor(self, valor: int):
         self.lbl_valor.setText(str(valor))
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+
+    def enterEvent(self, event):
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.unsetCursor()
+        super().leaveEvent(event)
 
 
 # ------------------------------------------------------------------ #
@@ -232,10 +251,58 @@ class PantallaDashboard(QWidget):
     editar_tarea_clicked = pyqtSignal(int)
     eliminar_tarea_clicked = pyqtSignal(int)
 
+    # HU08: señales de filtro por estado desde tarjetas de estadística
+    filtro_total_clicked = pyqtSignal()
+    filtro_pendientes_clicked = pyqtSignal()
+    filtro_completadas_clicked = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._usuario = ""
+        self._modo_filtro = "total"  # "total" | "pendientes" | "completadas"
         self._configurar_ui()
+
+    # -------------------- HU08 UI: mostrar/ocultar secciones --------------------
+
+    def aplicar_modo_filtro(self, modo: str) -> None:
+        """
+        Controla VISIBILIDAD de recuadros (secciones) según filtro.
+        - total: muestra pendientes y completadas
+        - pendientes: muestra solo pendientes
+        - completadas: muestra solo completadas
+        """
+        modo = (modo or "total").strip().lower()
+        if modo not in ("total", "pendientes", "completadas"):
+            modo = "total"
+
+        self._modo_filtro = modo
+
+        if modo == "total":
+            self.frame_pendientes.setVisible(True)
+            self.frame_completadas.setVisible(True)
+            self.spacer_entre_frames.setVisible(True)
+        elif modo == "pendientes":
+            self.frame_pendientes.setVisible(True)
+            self.frame_completadas.setVisible(False)
+            self.spacer_entre_frames.setVisible(False)
+        else:  # "completadas"
+            self.frame_pendientes.setVisible(False)
+            self.frame_completadas.setVisible(True)
+            self.spacer_entre_frames.setVisible(False)
+
+    def _click_total(self) -> None:
+        self.aplicar_modo_filtro("total")
+        self.filtro_total_clicked.emit()
+
+    def _click_pendientes(self) -> None:
+        self.aplicar_modo_filtro("pendientes")
+        self.filtro_pendientes_clicked.emit()
+
+    def _click_completadas(self) -> None:
+        self.aplicar_modo_filtro("completadas")
+        self.filtro_completadas_clicked.emit()
+
+    # --------------------------------------------------------------------------
 
     def _configurar_ui(self):
         layout_raiz = QVBoxLayout(self)
@@ -388,7 +455,11 @@ class PantallaDashboard(QWidget):
 
         contenido_layout.addWidget(self.frame_pendientes)
 
-        contenido_layout.addSpacing(28)
+        # (HU08) spacer controlable (en vez de addSpacing fijo)
+        self.spacer_entre_frames = QFrame()
+        self.spacer_entre_frames.setFixedHeight(28)
+        self.spacer_entre_frames.setStyleSheet("background: transparent; border: none;")
+        contenido_layout.addWidget(self.spacer_entre_frames)
 
         # ============ SECCION TAREAS COMPLETADAS ============
         self.frame_completadas = QFrame()
@@ -423,14 +494,18 @@ class PantallaDashboard(QWidget):
         layout_raiz.addWidget(scroll, 1)
 
         # ============ CONEXIONES ============
-        self.btn_registrar_tarea.clicked.connect(
-            self.registrar_tarea_clicked.emit
-        )
-        self.btn_cerrar_sesion.clicked.connect(
-            self.cerrar_sesion_clicked.emit
-        )
+        self.btn_registrar_tarea.clicked.connect(self.registrar_tarea_clicked.emit)
+        self.btn_cerrar_sesion.clicked.connect(self.cerrar_sesion_clicked.emit)
         self.btn_buscar.clicked.connect(self._al_buscar)
         self.txt_buscar.returnPressed.connect(self._al_buscar)
+
+        # HU08: clicks en tarjetas de estadística (primero aplica UI, luego emite señal)
+        self.stat_total.clicked.connect(self._click_total)
+        self.stat_pendientes.clicked.connect(self._click_pendientes)
+        self.stat_completadas.clicked.connect(self._click_completadas)
+
+        # Estado inicial: mostrar todo
+        self.aplicar_modo_filtro("total")
 
     def _al_buscar(self):
         texto = self.txt_buscar.text().strip()
@@ -441,6 +516,8 @@ class PantallaDashboard(QWidget):
         self.lbl_subtitulo.setText(
             f"Bienvenido, {usuario}. Aqui tienes un resumen de tus tareas."
         )
+        # al iniciar sesión, volvemos a vista total
+        self.aplicar_modo_filtro("total")
 
     def actualizar_estadisticas(self, total: int, pendientes: int, completadas: int):
         self.stat_total.establecer_valor(total)
@@ -455,6 +532,7 @@ class PantallaDashboard(QWidget):
         pendientes = [t for t in tareas if not t["completada"]]
         completadas = [t for t in tareas if t["completada"]]
 
+        # Pendientes
         self.lbl_placeholder_pendientes.setVisible(len(pendientes) == 0)
         for tarea in pendientes:
             card = TarjetaTarea(
@@ -468,6 +546,7 @@ class PantallaDashboard(QWidget):
             card.editar_clicked.connect(self.editar_tarea_clicked.emit)
             self.contenedor_pendientes.addWidget(card)
 
+        # Completadas
         self.lbl_placeholder_completadas.setVisible(len(completadas) == 0)
         for tarea in completadas:
             card = TarjetaTarea(

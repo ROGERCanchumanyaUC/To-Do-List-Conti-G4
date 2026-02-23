@@ -49,3 +49,13 @@ class TaskManager:
     ) -> bool:
         resultado = self._repo.marcar_completada(id_usuario, id_tarea, completada)
         return bool(resultado.ok)
+
+    def listar_tareas_por_estado(self, id_usuario: int, completada: bool):
+        """
+        Lista tareas filtrando por estado (pendiente/completada).
+        - completada=False -> pendientes
+        - completada=True  -> completadas
+        """
+        tareas = self.listar_tareas(id_usuario)
+        return [t for t in tareas if bool(getattr(t, "completada", False)) == bool(completada)]
+    
