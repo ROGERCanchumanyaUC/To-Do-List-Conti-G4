@@ -1,6 +1,8 @@
 """
 Vista para registrar/editar una tarea.
 Formulario centrado: titulo, descripcion, y botones Guardar/Cancelar.
+
+HU11: Confirmación al salir si hay cambios sin guardar.
 """
 
 from PyQt6.QtWidgets import (
@@ -13,6 +15,7 @@ from PyQt6.QtWidgets import (
     QTextEdit,
     QGraphicsDropShadowEffect,
     QSizePolicy,
+    QMessageBox,
 )
 from PyQt6.QtCore import pyqtSignal, Qt
 from PyQt6.QtGui import QColor
@@ -170,7 +173,7 @@ class PantallaRegistrarTarea(QWidget):
 
         form_layout.addSpacing(36)
 
-        # Botones: Cancelar y Guardar (animados, colores distintos)
+        # Botones
         botones_layout = QHBoxLayout()
         botones_layout.setSpacing(14)
 
@@ -234,7 +237,22 @@ class PantallaRegistrarTarea(QWidget):
             datos["modo"] = "crear"
         self.guardar_clicked.emit(datos)
 
+    # HU11: confirmar salida si hay cambios
+    def _hay_cambios(self) -> bool:
+        return bool(self.txt_titulo.text().strip() or self.txt_descripcion.toPlainText().strip())
+
     def _al_cancelar(self):
+        if self._hay_cambios() or self._modo_edicion:
+            r = QMessageBox.question(
+                self,
+                "Confirmar",
+                "Tienes cambios sin guardar.\n\n¿Deseas salir sin guardar?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if r != QMessageBox.StandardButton.Yes:
+                return
+
         self.limpiar_formulario()
         self.volver_clicked.emit()
 

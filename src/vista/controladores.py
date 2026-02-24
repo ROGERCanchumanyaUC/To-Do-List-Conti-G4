@@ -4,6 +4,7 @@ Controlador de UI / mediador para la vista de tareas.
 Conecta señales de widgets con la capa lógica (TaskManager).
 Incluye HU08: Filtrar tareas por estado (total/pendientes/completadas).
 Incluye HU10: Ordenar tareas (por fecha o por nombre).
+Incluye HU11: Confirmaciones y mensajes claros.
 """
 
 from __future__ import annotations
@@ -38,6 +39,26 @@ class ControladorTareasVista:
         self._conectar_senales()
         self._refrescar_dashboard()
 
+    # ---------------- HU11 helpers ----------------
+
+    def _info(self, titulo: str, mensaje: str) -> None:
+        QMessageBox.information(self.dashboard, titulo, mensaje)
+
+    def _warn(self, titulo: str, mensaje: str) -> None:
+        QMessageBox.warning(self.dashboard, titulo, mensaje)
+
+    def _confirm(self, titulo: str, mensaje: str) -> bool:
+        r = QMessageBox.question(
+            self.dashboard,
+            titulo,
+            mensaje,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return r == QMessageBox.StandardButton.Yes
+
+    # ------------------------------------------------
+
     def set_usuario(self, id_usuario: int | None) -> None:
         """Setea el usuario actual (para filtrar tareas por usuario)."""
         self._id_usuario = id_usuario
@@ -62,11 +83,11 @@ class ControladorTareasVista:
         if hasattr(self.dashboard, "filtro_completadas_clicked"):
             self.dashboard.filtro_completadas_clicked.connect(self._ver_completadas)
 
-        # HU10 (solo si existe en PantallaDashboard)
+        # HU10
         if hasattr(self.dashboard, "ordenar_changed"):
             self.dashboard.ordenar_changed.connect(self._cambiar_orden)
 
-    # ---------------- HU08: Acciones de filtro ----------------
+    # ---------------- HU08 ----------------
 
     def _ver_todas(self):
         self._filtro_estado = None
@@ -80,7 +101,7 @@ class ControladorTareasVista:
         self._filtro_estado = "completadas"
         self._refrescar_dashboard()
 
-    # ---------------- HU10: Orden ----------------
+    # ---------------- HU10 ----------------
 
     def _cambiar_orden(self, modo: str):
         modo = (modo or "fecha").strip().lower()
@@ -90,21 +111,19 @@ class ControladorTareasVista:
         self._refrescar_dashboard()
 
     def _ordenar_tareas(self, tareas):
-        """Ordena una lista de tareas ORM según HU10."""
         if self._orden == "nombre":
             return sorted(
                 tareas,
                 key=lambda t: (getattr(t, "titulo", "") or "").lower(),
             )
 
-        # fecha (más reciente primero)
         def key_fecha(t):
             v = getattr(t, "creada_en", None)
             return v if v is not None else datetime.min
 
         return sorted(tareas, key=key_fecha, reverse=True)
 
-    # ---------------- CRUD tareas ----------------
+    # ---------------- CRUD ----------------
 
     def _al_guardar(self, datos: dict):
         """Crear o editar tarea en BD."""
@@ -123,7 +142,7 @@ class ControladorTareasVista:
             QMessageBox.warning(
                 self.registrar,
                 "Campo requerido",
-                "El titulo de la tarea es obligatorio.",
+                "El título de la tarea es obligatorio.",
             )
             return
 
@@ -144,6 +163,9 @@ class ControladorTareasVista:
                     "Verifica que no exista otra con el mismo título.",
                 )
                 return
+
+            # ✅ HU11: mensaje claro
+            self._info("Actualización exitosa", "La tarea se actualizó correctamente.")
         else:
             tarea = self._task_manager.crear_tarea(
                 self._id_usuario,
@@ -159,20 +181,34 @@ class ControladorTareasVista:
                 )
                 return
 
+            # ✅ HU11: mensaje claro
+            self._info("Creación exitosa", "La tarea se registró correctamente.")
+
         self.registrar.limpiar_formulario()
         self._refrescar_dashboard()
         self.registrar.volver_clicked.emit()
 
     def _completar_tarea(self, id_tarea: int):
-        """Marca como completada."""
+        """Marca como completada (con confirmación HU11)."""
         if self._id_usuario is None:
             return
 
-        self._task_manager.marcar_completada(
+        if not self._confirm(
+            "Confirmar acción",
+            "¿Deseas marcar esta tarea como COMPLETADA?",
+        ):
+            return
+
+        ok = self._task_manager.marcar_completada(
             self._id_usuario,
             int(id_tarea),
             True,
         )
+        if not ok:
+            self._warn("No se pudo completar", "No se pudo actualizar el estado de la tarea.")
+            return
+
+        self._info("Listo", "La tarea fue marcada como completada.")
         self._refrescar_dashboard()
 
     def _editar_tarea(self, id_tarea: int):
@@ -201,7 +237,7 @@ class ControladorTareasVista:
 
         tareas = self._listar_tareas_all()
         tareas = self._aplicar_filtro_estado(tareas)
-        tareas = self._ordenar_tareas(tareas)  # HU10
+        tareas = self._ordenar_tareas(tareas)
 
         if not texto:
             self._mostrar_tareas([self._tarea_a_dict(t) for t in tareas])
@@ -238,31 +274,26 @@ class ControladorTareasVista:
         )
 
         tareas_visibles = self._aplicar_filtro_estado(tareas_all)
-        tareas_visibles = self._ordenar_tareas(tareas_visibles)  # HU10
+        tareas_visibles = self._ordenar_tareas(tareas_visibles)
         self._mostrar_tareas([self._tarea_a_dict(t) for t in tareas_visibles])
 
     def _listar_tareas_all(self):
-        """Obtiene todas las tareas del usuario (sin filtro)."""
         return self._task_manager.listar_tareas(self._id_usuario)
 
     def _aplicar_filtro_estado(self, tareas):
-        """Aplica filtro HU08 sobre una lista de tareas."""
         if self._filtro_estado is None:
             return tareas
-
         if self._filtro_estado == "pendientes":
             return [t for t in tareas if not bool(getattr(t, "completada", False))]
-
         if self._filtro_estado == "completadas":
             return [t for t in tareas if bool(getattr(t, "completada", False))]
-
         return tareas
 
     def _mostrar_tareas(self, tareas: list[dict]):
         self.dashboard.mostrar_tareas(tareas)
 
     def _eliminar_tarea(self, id_tarea: int):
-        """Elimina tarea con confirmación."""
+        """Elimina tarea con confirmación + mensaje claro (HU11)."""
         if self._id_usuario is None:
             return
 
@@ -274,23 +305,21 @@ class ControladorTareasVista:
                 break
 
         texto = (
-            f"¿Seguro que deseas eliminar la tarea:\n\n“{titulo}”?\n"
+            f"¿Seguro que deseas eliminar la tarea:\n\n“{titulo}”?\n\n"
+            "Esta acción no se puede deshacer."
             if titulo
-            else "¿Seguro que deseas eliminar esta tarea?."
+            else "¿Seguro que deseas eliminar esta tarea?\n\nEsta acción no se puede deshacer."
         )
 
-        respuesta = QMessageBox.question(
-            self.dashboard,
-            "Confirmar eliminación",
-            texto,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        )
-
-        if respuesta != QMessageBox.StandardButton.Yes:
+        if not self._confirm("Confirmar eliminación", texto):
             return
 
-        self._task_manager.eliminar_tarea(self._id_usuario, int(id_tarea))
+        ok = self._task_manager.eliminar_tarea(self._id_usuario, int(id_tarea))
+        if not ok:
+            self._warn("No se pudo eliminar", "No se pudo eliminar la tarea. Intenta nuevamente.")
+            return
+
+        self._info("Eliminación exitosa", "La tarea fue eliminada correctamente.")
         self._refrescar_dashboard()
 
     @staticmethod

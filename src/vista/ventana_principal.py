@@ -1,9 +1,11 @@
 """
 Ventana principal con QStackedWidget para navegacion entre pantallas.
 Indice 0: Login | Indice 1: Dashboard | Indice 2: Registrar Tarea
+
+HU11: Confirmación al cerrar sesión.
 """
 
-from PyQt6.QtWidgets import QMainWindow, QStackedWidget
+from PyQt6.QtWidgets import QMainWindow, QStackedWidget, QMessageBox
 
 from src.logica.login_logica import LoginLogica
 from src.logica.task_manager import TaskManager
@@ -85,6 +87,17 @@ class VentanaPrincipal(QMainWindow):
         self.stack.setCurrentIndex(self.INDICE_DASHBOARD)
 
     def _al_cerrar_sesion(self):
+        # HU11: confirmación
+        r = QMessageBox.question(
+            self,
+            "Confirmar",
+            "¿Deseas cerrar sesión?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if r != QMessageBox.StandardButton.Yes:
+            return
+
         self._usuario_actual = ""
         self._id_usuario_actual = None
 
