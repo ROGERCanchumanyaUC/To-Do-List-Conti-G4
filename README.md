@@ -1,82 +1,95 @@
-# OOPRA – Gestor de Tareas (Python + SQLite + Docker)
+# OOPRA – Gestor de Tareas (Python + SQLite + PyQt6)
 
-Herramienta de línea de comandos (CLI) para 
-**gestionar y organizar tareas diarias**. Permite 
-**crear, listar, editar, eliminar** y 
-**marcar tareas como completadas**, asegurando 
-**persistencia** en una base de datos **SQLite** (`DB.sqlite`). 
-El proyecto se desarrolla con **TDD**, control de versiones con **Git/GitHub**, y entorno reproducible con **Docker**.
+Aplicación de escritorio con interfaz gráfica para
+**gestionar y organizar tareas diarias**. Permite
+**crear, listar, editar, eliminar** y
+**marcar tareas como completadas**, con
+**persistencia** en una base de datos **SQLite** (`DB.sqlite`).
+El proyecto se desarrolla con **TDD**, control de versiones con **Git/GitHub**,
+entorno reproducible con **Docker**, e interfaz visual con **PyQt6**.
 
 ---
 
 ## Objetivo de la aplicación
 
-- Centralizar el registro de tareas diarias.
+- Centralizar el registro de tareas diarias con interfaz gráfica moderna.
 - Mantener la información persistente en `DB.sqlite`.
-- Aplicar buenas prácticas: **PEP-8**, arquitectura por capas (lógica / modelo), **TDD** y **cobertura de pruebas**.
-- Generar documentación técnica con **Sphinx** (incluyendo módulos y tests).
+- Aplicar buenas prácticas: **PEP-8**, arquitectura por capas (vista / lógica / modelo), **TDD** y **cobertura de pruebas**.
+- Generar documentación técnica con **Sphinx**.
 
 ---
 
 ## Integrantes del equipo
 
-- Canchumanya Avellaneda Roger
-- De La Cruz Cardenas Antony
-- Ochoa Vilchez Diego 
-- Zamudio Benito Dayaneira
+| Integrante | Ramas a cargo |
+|---|---|
+| Zamudio Benito Dayaneira | `feature/hu01-login`, `feature/hu04-editar-tarea` |
+| Ochoa Vilchez Diego | `feature/hu02-crear-tarea`, `feature/hu05-eliminar-tarea` |
+| Canchumanya Avellaneda Roger | `feature/hu03-ver-lista`, `feature/hu06-marcar-completada` |
+| De La Cruz Cardenas Antony |`feature/vista` |
 
 ---
 
 ## Requisitos técnicos
 
-- **Python** (trabajando con entorno virtual `.venv`)
+- **Python** (entorno virtual `.venv`)
 - **SQLite** (archivo persistente `DB.sqlite` en la raíz del proyecto)
+- **PyQt6** (interfaz gráfica de escritorio)
+- **SQLAlchemy** (ORM para acceso a la base de datos)
 - **Git + GitHub** (ramas por funcionalidad `feature/huXX-*`)
 - **Docker** (entorno reproducible)
-- **PyCharm** (IDE sugerido por la consigna)
+- **PyCharm** (IDE sugerido)
 
 ---
 
 ## Estructura del proyecto (actual)
-
 ```
-
 OOPRA/
-├─ DB.sqlite
-├─ main.py
-├─ requirements.txt
-├─ src/
-│  ├─ **init**.py
-│  ├─ logica/
-│  │  ├─ **init**.py
-│  │  └─ task_manager.py
-│  ├─ modelo/
-│  │  ├─ **init**.py
-│  │  ├─ conexion.py
-│  │  ├─ bd_model.py
-│  │  └─ repositorio_tareas.py
-│  └─ tests/
-│     ├─ **init**.py
-│     ├─ test_task_manager.py
-│     └─ (otros tests)
-└─ docs/
-├─ make.bat
-├─ Makefile
-├─ source/
-└─ build/
+├── DB.sqlite
+├── main.py
+├── seed_demo_data.py
+├── requirements.txt
+├── src/
+│   ├── __init__.py
+│   ├── logica/
+│   │   ├── __init__.py
+│   │   ├── task_manager.py
+│   │   └── login_logica.py
+│   ├── modelo/
+│   │   ├── __init__.py
+│   │   ├── conexion.py
+│   │   ├── bd_model.py
+│   │   └── repositorio_tareas.py
+│   ├── vista/
+│   │   ├── __init__.py
+│   │   ├── ventana_principal.py
+│   │   ├── pantalla_login.py
+│   │   ├── pantalla_dashboard.py
+│   │   ├── pantalla_registrar_tarea.py
+│   │   ├── controladores.py
+│   │   └── animaciones.py
+│   └── tests/
+│       ├── __init__.py
+│       ├── test_login.py
+│       └── test_task_manager.py
+└── docs/
+    ├── make.bat
+    ├── Makefile
+    └── source/
 ```
+
 ---
 
-## Historias de Usuario (rama por funcionalidad)
+## Historias de Usuario implementadas
 
-Cada historia se desarrolla en una rama independiente, siguiendo el esquema:
-
-- `feature/hu01-login`
-- `feature/hu02-crear-tarea`
-- `feature/hu03-ver-lista`
-- `feature/hu04-editar-tarea`
-- `feature/hu05-eliminar-tarea`
-- `feature/hu06-marcar-completada`
+| Rama | Descripción | Responsable |
+|---|---|---|
+| `feature/hu01-login` | Inicio de sesión con usuario y contraseña | Dayaneria |
+| `feature/hu02-crear-tarea` | Formulario para crear nueva tarea | Diego |
+| `feature/hu03-ver-lista` | Dashboard con lista de tareas del usuario | Roger |
+| `feature/hu04-editar-tarea` | Editar título y descripción de una tarea | Dayaneria |
+| `feature/hu05-eliminar-tarea` | Botón eliminar en cada tarjeta de tarea | Diego |
+| `feature/hu06-marcar-completada` | Checkbox para marcar tarea como completada | Roger |
 
 > **Regla académica:** las ramas **no se eliminan**; deben quedar visibles en el repo remoto como evidencia.
 
@@ -85,248 +98,110 @@ Cada historia se desarrolla en una rama independiente, siguiendo el esquema:
 ## Instalación y ejecución (Windows / PowerShell)
 
 ### 1) Crear y activar entorno virtual
-
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\activate
-````
+```
 
 ### 2) Instalar dependencias
-
 ```powershell
 pip install -r requirements.txt
 ```
 
-> Si no tienes `requirements.txt` instalado en el entorno, asegúrate que `pip` apunte a tu `.venv`.
-
 ### 3) Ejecutar el proyecto
-
 ```powershell
 python main.py
 ```
 
-**Resultado esperado (según tu main actual):**
+### 4) Cargar datos de prueba (opcional)
+```powershell
+python seed_demo_data.py
+```
 
-* Verifica/crea `DB.sqlite`
-* Crea/verifica tablas ORM (SQLAlchemy)
-* (Opcional) carga datos desde un `.sql` si lo agregas y lo habilitas en `main.py`
+---
+
+## Interfaz gráfica (PyQt6)
+
+### Pantallas disponibles
+
+| Pantalla | Archivo | Descripción |
+|---|---|---|
+| Login | `pantalla_login.py` | Formulario de autenticación |
+| Dashboard | `pantalla_dashboard.py` | Lista de tareas con tarjetas |
+| Registrar/Editar | `pantalla_registrar_tarea.py` | Formulario crear o editar tarea |
+
+### Flujo de navegación
+```
+Login → Dashboard → [Registrar Tarea] → Dashboard
+                 → [Editar Tarea]    → Dashboard
+```
 
 ---
 
 ## Base de datos (SQLite)
 
-### Archivo persistente
-
-* El proyecto usa un único archivo: **`DB.sqlite`** (en la raíz del proyecto).
-
-### Modelos ORM (SQLAlchemy)
-
-* `src/modelo/bd_model.py` define:
-
-  * `Usuario`
-  * `Tarea`
-
-Incluye:
-
-* Relaciones (`Usuario` ↔ `Tarea`)
-* Índices para búsquedas/listados
-* Restricciones (validación del título, valores booleanos)
-
-### Conexión
-
-* `src/modelo/conexion.py` centraliza:
-
-  * `ENGINE`, `SessionLocal`
-  * PRAGMAs SQLite necesarios (FK ON, etc.)
-  * `init_db()` para crear/verificar tablas
+- `src/modelo/bd_model.py` — Modelos ORM: `Usuario`, `Tarea`
+- `src/modelo/conexion.py` — `ENGINE`, `SessionLocal`, `init_db()`
+- `src/modelo/repositorio_tareas.py` — CRUD con transacciones y control de duplicados
 
 ---
 
-## Capa lógica y repositorio
+## Capa lógica (`src/logica/task_manager.py`)
 
-### `src/logica/task_manager.py`
-
-Contiene reglas de negocio para:
-
-* Crear tarea (valida título)
-* Listar tareas
-* Editar tarea
-* Eliminar tarea
-* Marcar completada
-
-### `src/modelo/repositorio_tareas.py`
-
-Repositorio para persistencia con SQLAlchemy:
-
-* Maneja transacciones
-* Controla duplicados (IntegrityError)
-* Evita que la capa lógica maneje SQL o sesiones directamente
+- `crear_tarea(id_usuario, titulo, descripcion)` — HU02
+- `listar_tareas(id_usuario)` — HU03
+- `editar_tarea(id_usuario, id_tarea, nuevo_titulo, nueva_descripcion)` — HU04
+- `eliminar_tarea(id_usuario, id_tarea)` — HU05
+- `marcar_completada(id_usuario, id_tarea, completada)` — HU06
 
 ---
 
-## Pruebas (TDD) y organización
-
-Las pruebas están en:
-
-```
-src/tests/
-```
-
-Se ejecutan con descubrimiento de `unittest`.
-
-### Ejecutar tests
-
-Desde la raíz del proyecto:
-
+## Pruebas (TDD)
 ```powershell
 python -m unittest discover -s src/tests -p "test_*.py" -v
 ```
 
 ---
 
-## Cobertura de pruebas (coverage)
-
-### 1) Instalar coverage (si aún no está)
-
-```powershell
-pip install coverage
-```
-
-### 2) Ejecutar coverage + tests
-
+## Cobertura de pruebas
 ```powershell
 coverage run -m unittest discover -s src/tests -p "test_*.py" -v
-```
-
-### 3) Ver reporte
-
-```powershell
 coverage report -m
-```
-
-### 4) (Opcional) Reporte HTML
-
-```powershell
 coverage html
-```
-
-Se genera en:
-
-```
-htmlcov/index.html
 ```
 
 ---
 
-## Estándares de código (PEP-8 + formateo)
-
-Se aplicó verificación y formateo automático con:
-
-### Ruff
-
+## Estándares de código (PEP-8)
 ```powershell
 python -m ruff check . --fix
-python -m ruff check .
-```
-
-### Black
-
-```powershell
 python -m black .
-```
-
-### isort
-
-```powershell
 python -m isort .
 ```
 
 ---
 
 ## Documentación (Sphinx)
-
-La documentación se encuentra en:
-
-```
-docs/
-```
-
-### 1) Instalar dependencias de documentación
-
 ```powershell
 pip install sphinx sphinx-rtd-theme
-```
-
-### 2) Generar `.rst` automáticamente
-
-Desde `docs/`:
-
-```powershell
 sphinx-apidoc -o source ..\src -f
-```
-
-### 3) Compilar HTML
-
-```powershell
 .\make.bat html
-```
-
-### 4) Ver HTML
-
-El índice generado está en:
-
-```
-docs/build/html/index.html
-```
-
-En PowerShell:
-
-```powershell
 start .\build\html\index.html
 ```
 
-### Documentar módulos y tests
-
-Actualmente Sphinx está configurado para:
-
-* Documentar módulos bajo `src/`
-* Incluir también los tests (`src/tests`) si están referenciados en `toctree`
-
 ---
 
-## Avances completados (últimos avances)
+## Avances completados
 
-- ✅ Git y GitHub en uso
-- ✅ `.gitignore` incluido
-- ✅ `README.md` completo (este archivo)
-- ✅ SQLite configurado y persistencia en `DB.sqlite`
-- ✅ Modelos ORM (`Usuario`, `Tarea`) y relaciones
-- ✅ Repositorio SQLite (transacciones + errores de integridad)
-- ✅ Lógica de negocio en `TaskManager`
-- ✅ Pruebas con `unittest` en `src/tests`
-- ✅ Cobertura con `coverage` (reporte en consola y opcional HTML)
+- ✅ Git y GitHub con ramas por historia de usuario
+- ✅ SQLite configurado con persistencia en `DB.sqlite`
+- ✅ Modelos ORM (`Usuario`, `Tarea`) con relaciones y restricciones
+- ✅ Repositorio SQLite con transacciones y control de duplicados
+- ✅ Lógica de negocio en `TaskManager` (HU02–HU06)
+- ✅ Interfaz gráfica completa con PyQt6 (Login, Dashboard, Formulario)
+- ✅ Navegación entre pantallas mediante señales PyQt6
+- ✅ Confirmación al salir con cambios sin guardar (HU11)
+- ✅ Pruebas con `unittest` en `src/tests/`
+- ✅ Cobertura con `coverage`
 - ✅ Estándares PEP-8 con Ruff + Black + isort
-- ✅ Documentación técnica con Sphinx (HTML generado)
-
----
-
-## Problemas comunes y solución rápida
-
-### “NO TESTS RAN”
-
-Asegúrate de ejecutar desde la **raíz** y que tus tests estén en `src/tests/`:
-
-```powershell
-python -m unittest discover -s src/tests -p "test_*.py" -v
-```
-
-### Sphinx warning “document isn’t included in any toctree”
-
-Incluye `modules` (y si deseas tests) en tu `index.rst`.
-Luego vuelve a compilar:
-
-```powershell
-.\make.bat clean
-.\make.bat html
-```
-
+- ✅ Documentación técnica con Sphinx
