@@ -79,6 +79,7 @@ class TestTaskManagerConDBReal(unittest.TestCase):
 
         tareas = self.manager.listar_tareas(self.id_usuario)
         self.assertEqual("Editada", tareas[0].titulo)
+        self.assertEqual("B", tareas[0].descripcion)
 
     # HU05
     def test_eliminar_tarea_ok(self) -> None:
