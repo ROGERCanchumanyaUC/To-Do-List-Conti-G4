@@ -12,13 +12,12 @@ class TaskManager:
     def __init__(self, repositorio: RepositorioTareasSQLite | None = None) -> None:
         self._repo = repositorio or RepositorioTareasSQLite()
 
+    # HU02 - Crear tarea
     def crear_tarea(self, id_usuario: int, titulo: str, descripcion: str = ""):
         titulo = (titulo or "").strip()
         if not titulo:
             raise ValueError("El título no puede estar vacío.")
-
         tarea, _msg = self._repo.crear_tarea(id_usuario, titulo, descripcion)
-        # Duplicado -> None
         return tarea
 
     def listar_tareas(self, id_usuario: int):
@@ -39,6 +38,7 @@ class TaskManager:
         )
         return bool(resultado.ok)
 
+    # HU05 - Eliminar tarea
     def eliminar_tarea(self, id_usuario: int, id_tarea: int) -> bool:
         resultado = self._repo.eliminar_tarea(id_usuario, id_tarea)
         return bool(resultado.ok)
