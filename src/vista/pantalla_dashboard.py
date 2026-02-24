@@ -1,7 +1,10 @@
 """
 Pantalla del dashboard principal.
 Top bar con Cerrar Sesion a la derecha, Registrar Tarea + Buscar centrados.
-Secciones con fondos coloreados y tarjetas animadas.
+
+✅ UI:
+- Se eliminan textos "Dashboard" y "Bienvenido..." del cuerpo.
+- Solo en el TOP BAR se muestra: "BIENVENIDO, usuario".
 
 HU08 (UI): Filtrar por estado desde las tarjetas de estadística:
 - Click en TOTAL -> muestra ambas columnas (Pendientes izq, Completadas der)
@@ -154,9 +157,7 @@ class TarjetaTarea(TarjetaAnimada):
 
         lbl_fecha = QLabel(fecha)
         lbl_fecha.setProperty("cssClass", "task-fecha")
-        lbl_fecha.setAlignment(
-            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop
-        )
+        lbl_fecha.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignTop)
         top_row.addWidget(lbl_fecha)
 
         layout.addLayout(top_row)
@@ -214,9 +215,7 @@ class TarjetaTarea(TarjetaAnimada):
                 "QPushButton:hover { background-color: #fcd34d; }"
                 "QPushButton:pressed { background-color: #fbbf24; }"
             )
-            btn_editar.clicked.connect(
-                lambda: self.editar_clicked.emit(self._id_tarea)
-            )
+            btn_editar.clicked.connect(lambda: self.editar_clicked.emit(self._id_tarea))
             btn_row.addWidget(btn_editar)
         else:
             btn_eliminar = BotonAnimado(
@@ -275,16 +274,16 @@ class PantallaDashboard(QWidget):
     # -------------------- HU08: mover cuadros para que "solo uno" aparezca a la izquierda --------------------
 
     def _mover_a_layout(self, widget: QWidget, layout: QVBoxLayout) -> None:
-        """Mueve widget al layout objetivo (solo si no está ya ahí)."""
+        """Mueve widget al layout objetivo (sin destruir)."""
         if widget.parent() is layout.parentWidget():
             return
-        # Quita de su layout anterior si aplica
+
         if widget.parent() is not None and widget.parent() is not self:
-            # remover del layout anterior sin destruir
             old_parent = widget.parent()
             old_layout = old_parent.layout()
             if old_layout is not None:
                 old_layout.removeWidget(widget)
+
         layout.addWidget(widget)
 
     def aplicar_modo_filtro(self, modo: str) -> None:
@@ -294,21 +293,18 @@ class PantallaDashboard(QWidget):
         self._modo_filtro = modo
 
         if modo == "total":
-            # Pendientes a la izquierda, Completadas a la derecha
             self._mover_a_layout(self.frame_pendientes, self._lay_col_izq)
             self._mover_a_layout(self.frame_completadas, self._lay_col_der)
             self.frame_pendientes.setVisible(True)
             self.frame_completadas.setVisible(True)
 
         elif modo == "pendientes":
-            # Pendientes a la izquierda visible, Completadas a la derecha oculto
             self._mover_a_layout(self.frame_pendientes, self._lay_col_izq)
             self._mover_a_layout(self.frame_completadas, self._lay_col_der)
             self.frame_pendientes.setVisible(True)
             self.frame_completadas.setVisible(False)
 
         else:  # completadas
-            # ✅ Completadas debe mostrarse en la izquierda
             self._mover_a_layout(self.frame_completadas, self._lay_col_izq)
             self._mover_a_layout(self.frame_pendientes, self._lay_col_der)
             self.frame_completadas.setVisible(True)
@@ -400,7 +396,8 @@ class PantallaDashboard(QWidget):
         topbar_layout.setContentsMargins(36, 0, 36, 0)
         topbar_layout.setSpacing(16)
 
-        self.lbl_usuario = QLabel("Dashboard")
+        # ✅ ÚNICO TEXTO visible
+        self.lbl_usuario = QLabel("BIENVENIDO")
         self.lbl_usuario.setStyleSheet(
             "font-size: 20px; font-weight: 800; color: #ffffff;"
             "letter-spacing: -0.3px;"
@@ -454,6 +451,7 @@ class PantallaDashboard(QWidget):
         centro.addWidget(self.btn_ordenar)
 
         topbar_layout.addLayout(centro)
+
         topbar_layout.addStretch()
 
         self.btn_cerrar_sesion = BotonAnimado(
@@ -478,38 +476,23 @@ class PantallaDashboard(QWidget):
         contenido_widget = QWidget()
         contenido_widget.setStyleSheet("background: #e8ecf1;")
         contenido_layout = QVBoxLayout(contenido_widget)
-        contenido_layout.setContentsMargins(44, 36, 44, 36)
+        contenido_layout.setContentsMargins(44, 28, 44, 36)  # 🔧 sube un poco
         contenido_layout.setSpacing(0)
 
-        self.lbl_titulo = QLabel("Dashboard")
-        self.lbl_titulo.setProperty("cssClass", "titulo")
-        contenido_layout.addWidget(self.lbl_titulo)
-
-        contenido_layout.addSpacing(4)
-
-        self.lbl_subtitulo = QLabel("Bienvenido, Usuario")
-        self.lbl_subtitulo.setProperty("cssClass", "subtitulo")
-        contenido_layout.addWidget(self.lbl_subtitulo)
-
-        contenido_layout.addSpacing(30)
+        # ✅ Se eliminan labels de Dashboard/Bienvenido del cuerpo
+        # (arrancamos directo con estadísticas)
 
         # ============ ESTADISTICAS ============
         stats_layout = QHBoxLayout()
         stats_layout.setSpacing(18)
 
-        self.stat_total = TarjetaEstadistica(
-            "Total de Tareas", 0, icono="\u2630", variante="blue"
-        )
+        self.stat_total = TarjetaEstadistica("Total de Tareas", 0, icono="\u2630", variante="blue")
         stats_layout.addWidget(self.stat_total)
 
-        self.stat_pendientes = TarjetaEstadistica(
-            "Pendientes", 0, icono="\u25cb", variante="amber"
-        )
+        self.stat_pendientes = TarjetaEstadistica("Pendientes", 0, icono="\u25cb", variante="amber")
         stats_layout.addWidget(self.stat_pendientes)
 
-        self.stat_completadas = TarjetaEstadistica(
-            "Completadas", 0, icono="\u2713", variante="green"
-        )
+        self.stat_completadas = TarjetaEstadistica("Completadas", 0, icono="\u2713", variante="green")
         stats_layout.addWidget(self.stat_completadas)
 
         stats_layout.addStretch()
@@ -583,7 +566,7 @@ class PantallaDashboard(QWidget):
         self.lbl_placeholder_completadas.setAlignment(Qt.AlignmentFlag.AlignCenter)
         frame_comp_layout.addWidget(self.lbl_placeholder_completadas)
 
-        # Estado inicial: Pendientes izq / Completadas der
+        # Estado inicial
         self._lay_col_izq.addWidget(self.frame_pendientes)
         self._lay_col_der.addWidget(self.frame_completadas)
 
@@ -613,7 +596,6 @@ class PantallaDashboard(QWidget):
         self._crear_menu_ordenar()
         self.btn_ordenar.clicked.connect(self._mostrar_menu_ordenar)
 
-        # Estado inicial
         self.aplicar_modo_filtro("total")
 
     def _al_buscar(self):
@@ -621,10 +603,9 @@ class PantallaDashboard(QWidget):
         self.buscar_clicked.emit(texto)
 
     def establecer_usuario(self, usuario: str):
-        self._usuario = usuario
-        self.lbl_subtitulo.setText(
-            f"Bienvenido, {usuario}. Aqui tienes un resumen de tus tareas."
-        )
+        self._usuario = usuario or ""
+        # ✅ ÚNICO texto visible
+        self.lbl_usuario.setText(f"BIENVENIDO, {self._usuario}")
         self.aplicar_modo_filtro("total")
 
     def actualizar_estadisticas(self, total: int, pendientes: int, completadas: int):
@@ -640,7 +621,6 @@ class PantallaDashboard(QWidget):
         pendientes = [t for t in tareas if not t["completada"]]
         completadas = [t for t in tareas if t["completada"]]
 
-        # Pendientes
         self.lbl_placeholder_pendientes.setVisible(len(pendientes) == 0)
         for tarea in pendientes:
             card = TarjetaTarea(
@@ -654,7 +634,6 @@ class PantallaDashboard(QWidget):
             card.editar_clicked.connect(self.editar_tarea_clicked.emit)
             self.contenedor_pendientes.addWidget(card)
 
-        # Completadas
         self.lbl_placeholder_completadas.setVisible(len(completadas) == 0)
         for tarea in completadas:
             card = TarjetaTarea(

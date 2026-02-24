@@ -274,10 +274,9 @@ class ControladorTareasVista:
                 break
 
         texto = (
-            f"¿Seguro que deseas eliminar la tarea:\n\n“{titulo}”?\n\n"
-            "Esta acción no se puede deshacer."
+            f"¿Seguro que deseas eliminar la tarea:\n\n“{titulo}”?\n"
             if titulo
-            else "¿Seguro que deseas eliminar esta tarea?\n\nEsta acción no se puede deshacer."
+            else "¿Seguro que deseas eliminar esta tarea?."
         )
 
         respuesta = QMessageBox.question(

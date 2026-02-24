@@ -1,5 +1,5 @@
 """
-Punto de entrada de la aplicacion Todo App.
+Punto de entrada de la aplicacion OOPRA.
 Crea la aplicacion PyQt6, carga estilos QSS y muestra la ventana principal.
 """
 
@@ -30,8 +30,8 @@ def cargar_estilos(app: QApplication) -> None:
 def main():
     """Funcion principal que inicia la aplicacion."""
     app = QApplication(sys.argv)
-    app.setApplicationName("Todo App")
-    app.setApplicationDisplayName("Todo App - Gestor de Tareas")
+    app.setApplicationName("OOPRA")
+    app.setApplicationDisplayName("OOPRA - Gestor de Tareas")
 
     # Fuente base de la aplicacion
     fuente = QFont("Segoe UI", 10)

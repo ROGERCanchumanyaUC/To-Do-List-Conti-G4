@@ -1,12 +1,13 @@
 # src/logica/task_manager.py
 from __future__ import annotations
+
 from datetime import datetime
 
 from src.modelo.repositorio_tareas import RepositorioTareasSQLite
 
 
 class TaskManager:
-    """Reglas de negocio para tareas (HU02–HU06)."""
+    """Reglas de negocio para tareas (HU02–HU06 + HU08 + HU10)."""
 
     def __init__(self, repositorio: RepositorioTareasSQLite | None = None) -> None:
         self._repo = repositorio or RepositorioTareasSQLite()
@@ -17,7 +18,7 @@ class TaskManager:
             raise ValueError("El título no puede estar vacío.")
 
         tarea, _msg = self._repo.crear_tarea(id_usuario, titulo, descripcion)
-        # Duplicado -> None (válido para tu HU)
+        # Duplicado -> None
         return tarea
 
     def listar_tareas(self, id_usuario: int):
@@ -58,7 +59,12 @@ class TaskManager:
         - completada=True  -> completadas
         """
         tareas = self.listar_tareas(id_usuario)
-        return [t for t in tareas if bool(getattr(t, "completada", False)) == bool(completada)]
+        return [
+            t
+            for t in tareas
+            if bool(getattr(t, "completada", False)) == bool(completada)
+        ]
+
     def listar_tareas_ordenadas(self, id_usuario: int, orden: str = "fecha"):
         """
         HU10: Lista tareas del usuario ordenadas.
@@ -75,7 +81,6 @@ class TaskManager:
                 key=lambda t: (getattr(t, "titulo", "") or "").lower(),
             )
 
-        # Por fecha (más reciente primero)
         def key_fecha(t):
             v = getattr(t, "creada_en", None)
             return v if v is not None else datetime.min

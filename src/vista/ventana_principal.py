@@ -22,7 +22,7 @@ class VentanaPrincipal(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Todo App - Gestor de Tareas")
+        self.setWindowTitle("OOPRA - Gestor de Tareas")
         self.setMinimumSize(1024, 680)
 
         self._usuario_actual = ""

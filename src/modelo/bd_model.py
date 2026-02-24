@@ -3,8 +3,19 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import (Boolean, CheckConstraint, DateTime, ForeignKey, Index,
-                        Integer, String, Text, UniqueConstraint, func, text)
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.modelo.conexion import Base
@@ -30,10 +41,12 @@ class Usuario(Base):
         String(255),
         nullable=False,
     )
+
+    # ✅ SQLite: guarda fecha/hora en LOCALTIME (Lima si Windows está en Lima)
     creado_en: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        server_default=text("CURRENT_TIMESTAMP"),
+        server_default=text("(datetime('now','localtime'))"),
     )
 
     tareas: Mapped[list["Tarea"]] = relationship(
@@ -84,16 +97,19 @@ class Tarea(Base):
         server_default=text("0"),
     )
 
+    # ✅ SQLite: guarda fecha/hora en LOCALTIME (Lima si Windows está en Lima)
     creada_en: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        server_default=text("CURRENT_TIMESTAMP"),
+        server_default=text("(datetime('now','localtime'))"),
     )
+
+    # ✅ onupdate también en localtime (cuando SQLAlchemy hace UPDATE)
     actualizada_en: Mapped[datetime] = mapped_column(
         DateTime,
         nullable=False,
-        server_default=text("CURRENT_TIMESTAMP"),
-        onupdate=func.current_timestamp(),
+        server_default=text("(datetime('now','localtime'))"),
+        onupdate=func.datetime("now", "localtime"),
     )
 
     usuario: Mapped["Usuario"] = relationship(back_populates="tareas")
